@@ -14,7 +14,7 @@ Commands are vendor-neutral. The server assigns `id`, `issuedAt`, and default `e
 
 Default `expiresAt` is 24 hours after enqueue. Operator may pass a custom `expiresAt`.
 
-Ids in this sample are `c-1`, `c-2`, … (process-local counter).
+Ids are `c-1`, `c-2`, … (monotonic counter in SQLite).
 
 ## Lifecycle
 

@@ -10,9 +10,10 @@ Canonical agent intent lives in TMSManager `llm/purpose.md`. This sample covers 
 |---|---|
 | No auth | Register still returns a `token` because the agent requires it. The server never checks `Authorization`. |
 | Vendor-neutral | No Topwise / PAX SDK. Identity fields (`vendor`, `model`, `firmware`) are stored as JSON. |
-| In memory | Terminals and commands are a `Map`. Restart wipes everything. The agent then gets HTTP 404 and should re-register. |
+| SQLite | Terminals and commands survive restart in `db.sqlite3`. Same `serialNumber` → same `terminalId` and `token`. |
 | Outbound poll | The device calls the server. There is no push or MQTT. |
 | Protocol v1 | `protocolVersion: 1` on agent bodies. The server does not reject other values. |
+| Django admin | Browse terminals, last heartbeat/inventory, enqueue commands. Staff login only; no agent auth. |
 
 ## What the agent does each tick (~60s)
 
@@ -29,7 +30,6 @@ First register in this sample also enqueues a `ping` so the first poll proves co
 Not implemented here, on purpose:
 
 - Verify bearer tokens; rotate and revoke them.
-- Persist terminals and command history.
 - Check `capabilities` before enqueueing a type the agent does not support.
 - Sign packages; install / reboot / firmware only after the foundation is reliable.
 - Never put payment data, PINs, or plaintext keys in these messages or in logs.

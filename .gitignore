@@ -1,1 +1,7 @@
-node_modules/
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+db.sqlite3
+*.egg-info/
+.pytest_cache/

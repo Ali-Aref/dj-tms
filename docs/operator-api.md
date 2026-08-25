@@ -10,7 +10,7 @@ Liveness. Not under `/v1`.
 
 ## `GET /v1/terminals`
 
-All terminals currently in memory.
+All terminals in the database.
 
 **Response `200`**
 
@@ -28,7 +28,7 @@ All terminals currently in memory.
 }
 ```
 
-`lastHeartbeat` / `lastInventory` are `null` until the agent has posted them. `commands` is the full in-memory list (pending and completed).
+`lastHeartbeat` / `lastInventory` are `null` until the agent has posted them. `commands` is the full stored list (pending and completed). Same data is visible in Django admin at `/admin/`.
 
 ## `GET /v1/terminals/{terminalId}`
 

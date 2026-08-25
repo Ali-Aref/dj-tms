@@ -1,21 +1,30 @@
 # Running
 
 ```bash
-npm install
-npm start
+python -m venv .venv
+source .venv/bin/activate   # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+python manage.py migrate
+python manage.py runserver 0.0.0.0:3000
 ```
 
-Listens on `0.0.0.0:3000`. Override with `PORT`.
-
-```bash
-PORT=8080 npm start
-```
+Listens on `0.0.0.0:3000` by default.
 
 Self-check (does not need a device):
 
 ```bash
-npm run check
+python manage.py test
 ```
+
+## Django admin
+
+Create a staff user once:
+
+```bash
+python manage.py createsuperuser
+```
+
+Open `http://<host>:3000/admin/`. Terminals show serial, vendor, model, last heartbeat. Add commands from **Commands** or the terminal inline. Payload validation matches the operator API.
 
 ## Point the agent at this server
 
@@ -39,8 +48,8 @@ POST /v1/terminals/register 200 1ms
   res {"terminalId":"...","token":"..."}
 ```
 
-Restarting the process drops all terminals. The next agent call to heartbeat/poll/inventory returns `404 unknown terminal`. The agent treats that as lost credentials and registers again.
+Restarting the server keeps terminals in SQLite. The agent keeps using the same `terminalId` and `token` after re-register with the same serial.
 
 ## Content type
 
-JSON endpoints expect `Content-Type: application/json`. Bodies over 1 MB are rejected by Express.
+JSON endpoints expect `Content-Type: application/json`. Bodies over 1 MB are rejected.
