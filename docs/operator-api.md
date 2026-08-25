@@ -64,4 +64,4 @@ curl -s -X POST http://127.0.0.1:3000/v1/terminals/<terminalId>/commands \
   -d '{"type":"ping"}'
 ```
 
-Useful types today: `ping`, `collect_inventory`. Any other string is accepted here; the agent will report `failed` / `unsupported:…`.
+Useful types today: `ping`, `collect_inventory`, `install_app`, `uninstall_app`, `reboot`. Payload rules: [Commands](commands.md). Invalid payload → `400` with an error string.

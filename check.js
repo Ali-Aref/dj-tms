@@ -77,6 +77,19 @@ try {
   const poll3 = await json("GET", `/terminals/${id}/commands`);
   assert.equal(poll3.body.commands[0].type, "collect_inventory");
 
+  const badInstall = await json("POST", `/terminals/${id}/commands`, {
+    type: "install_app",
+    payload: {},
+  });
+  assert.equal(badInstall.status, 400);
+
+  const reboot = await json("POST", `/terminals/${id}/commands`, {
+    type: "reboot",
+    payload: { delayMs: 0 },
+  });
+  assert.equal(reboot.status, 201);
+  assert.equal(reboot.body.type, "reboot");
+
   const missing = await json("POST", "/terminals/nope/heartbeat", {});
   assert.equal(missing.status, 404);
 

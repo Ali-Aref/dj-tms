@@ -33,6 +33,44 @@ function enqueue(store, t, type, payload = {}, expiresAt) {
   return cmd;
 }
 
+function validateEnqueuePayload(type, payload) {
+  if (payload == null || typeof payload !== "object" || Array.isArray(payload)) {
+    return "payload must be an object";
+  }
+  switch (type) {
+    case "install_app": {
+      const url = payload.url;
+      if (!url || typeof url !== "string" || !url.trim()) return "install_app: url required";
+      if (!/^https?:\/\//i.test(url.trim())) return "install_app: url must be http or https";
+      if (payload.sha256 != null && payload.sha256 !== "") {
+        if (typeof payload.sha256 !== "string" || !/^[0-9a-fA-F]{64}$/.test(payload.sha256)) {
+          return "install_app: sha256 must be 64 hex chars";
+        }
+      }
+      if (payload.packageName != null && typeof payload.packageName !== "string") {
+        return "install_app: packageName must be a string";
+      }
+      return null;
+    }
+    case "uninstall_app": {
+      const pkg = payload.packageName;
+      if (!pkg || typeof pkg !== "string" || !pkg.trim()) return "uninstall_app: packageName required";
+      return null;
+    }
+    case "reboot": {
+      if (payload.delayMs != null && (typeof payload.delayMs !== "number" || payload.delayMs < 0)) {
+        return "reboot: delayMs must be a number >= 0";
+      }
+      return null;
+    }
+    case "ping":
+    case "collect_inventory":
+      return null;
+    default:
+      return null;
+  }
+}
+
 function requireTerminal(store, req, res) {
   const t = store.byId.get(req.params.terminalId);
   if (!t) {
@@ -154,7 +192,13 @@ export function createApp(store = createStore()) {
       res.status(400).json({ error: "type required" });
       return;
     }
-    const cmd = enqueue(store, t, type, req.body.payload ?? {}, req.body.expiresAt);
+    const payload = req.body.payload ?? {};
+    const payloadErr = validateEnqueuePayload(type, payload);
+    if (payloadErr) {
+      res.status(400).json({ error: payloadErr });
+      return;
+    }
+    const cmd = enqueue(store, t, type, payload, req.body.expiresAt);
     res.status(201).json(cmd);
   });
 
