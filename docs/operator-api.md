@@ -52,11 +52,13 @@ Enqueue work. The next agent poll will include it until a result is posted.
 |---|---|---|
 | `type` | yes (non-empty string) | — |
 | `payload` | no | `{}` |
-| `expiresAt` | no | now + 24h (epoch ms) |
+| `expiresAt` | no | now + 24h (epoch ms on wire; use admin date/time picker in Django) |
 
 Missing `type` → `400` `{ "error": "type required" }`.
 
 **Response `201`** — the stored command, including `status: "pending"` and `result: null`.
+
+Install / uninstall / reboot examples: [Remote ops](remote-ops.md).
 
 ```bash
 curl -s -X POST http://127.0.0.1:3000/v1/terminals/<terminalId>/commands \

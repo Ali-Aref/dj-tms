@@ -12,7 +12,7 @@ Commands are vendor-neutral. The server assigns `id`, `issuedAt`, and default `e
 | `expiresAt` | number | Epoch ms; agent fails with `expired` if `now >= expiresAt` and `expiresAt > 0`. `0` means no expiry. |
 | `payload` | object | Type-specific JSON. Default `{}`. |
 
-Default `expiresAt` is 24 hours after enqueue. Operator may pass a custom `expiresAt`.
+Default `expiresAt` is 24 hours after enqueue. Operator may pass a custom `expiresAt` (epoch ms on the API; date/time picker in Django admin). See [Remote ops](remote-ops.md#expires-at).
 
 Ids are `c-1`, `c-2`, … (monotonic counter in SQLite).
 

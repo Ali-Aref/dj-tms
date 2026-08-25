@@ -1,11 +1,31 @@
 import re
 import time
+from datetime import datetime, timezone
 
 from django.db import transaction
+from django.utils import timezone as dj_tz
 
 from .models import Command, CommandSeq, Terminal
 
 DAY_MS = 24 * 60 * 60 * 1000
+
+
+def ms_to_dt(ms):
+    return datetime.fromtimestamp(ms / 1000, tz=timezone.utc)
+
+
+def dt_to_ms(dt):
+    if dt is None:
+        return None
+    if dj_tz.is_naive(dt):
+        dt = dj_tz.make_aware(dt)
+    return int(dt.timestamp() * 1000)
+
+
+def format_expires_at(ms):
+    if not ms:
+        return "-"
+    return dj_tz.localtime(ms_to_dt(ms)).strftime("%Y-%m-%d %H:%M %Z")
 
 
 def validate_enqueue_payload(cmd_type, payload):

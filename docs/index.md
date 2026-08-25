@@ -12,6 +12,7 @@ This is a contract sketch for a real TMS, not a production server.
 | [Running](running.md) | Start the server, Django admin, point the agent at it |
 | [Agent API](agent-api.md) | Endpoints the POS calls every tick |
 | [Commands](commands.md) | Command shape, status, poll/result rules, v1 types |
+| [Remote ops](remote-ops.md) | Install, uninstall, reboot — admin steps, curl, expiry |
 | [Operator API](operator-api.md) | Health, inspect terminals, enqueue work (API or admin) |
 
 ## Endpoint map

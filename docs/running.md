@@ -26,6 +26,8 @@ python manage.py createsuperuser
 
 Open `http://<host>:3000/admin/`. Terminals show serial, vendor, model, last heartbeat. Add commands from **Commands** or the terminal inline. Payload validation matches the operator API.
 
+For **install**, **uninstall**, and **reboot** walkthroughs see [Remote ops](remote-ops.md).
+
 ## Point the agent at this server
 
 In TMSManager, `TMS_BASE_URL` must already include `/v1`, for example:

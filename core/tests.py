@@ -105,6 +105,16 @@ class ApiTests(TestCase):
         self.assertEqual(code, 200)
         self.assertEqual(body, {"ok": True})
 
+    def test_expires_at_conversion(self):
+        from datetime import datetime, timezone
+
+        from core.services import dt_to_ms, format_expires_at, ms_to_dt
+
+        dt = datetime(2026, 1, 2, 12, 0, tzinfo=timezone.utc)
+        ms = dt_to_ms(dt)
+        self.assertEqual(ms_to_dt(ms), dt)
+        self.assertIn("2026", format_expires_at(ms))
+
     def test_persistence_across_requests(self):
         code, body = self._json("POST", "/v1/terminals/register", self.identity)
         tid = body["terminalId"]

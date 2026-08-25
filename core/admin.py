@@ -1,17 +1,25 @@
+from datetime import timedelta
+
+from django import forms
 from django.contrib import admin
 from django.core.exceptions import ValidationError
 from django.forms import ModelForm
+from django.utils import timezone
 
 from .models import Command, Terminal
-from .services import enqueue, validate_enqueue_payload
+from .services import dt_to_ms, enqueue, format_expires_at, ms_to_dt, validate_enqueue_payload
 
 
 class CommandInline(admin.TabularInline):
     model = Command
     extra = 0
-    fields = ("command_id", "type", "status", "issued_at", "expires_at", "payload", "result")
-    readonly_fields = ("command_id", "issued_at", "status", "result")
+    fields = ("command_id", "type", "status", "expires_at_display", "payload", "result")
+    readonly_fields = ("command_id", "status", "expires_at_display", "result")
     can_delete = False
+
+    @admin.display(description="expires at")
+    def expires_at_display(self, obj):
+        return format_expires_at(obj.expires_at)
 
 
 @admin.register(Terminal)
@@ -38,9 +46,26 @@ class TerminalAdmin(admin.ModelAdmin):
 
 
 class CommandAdminForm(ModelForm):
+    expires_at_dt = forms.SplitDateTimeField(
+        required=False,
+        label="Expires at",
+        help_text=(
+            "Last moment the POS will run this command. "
+            "Leave blank to use 24 hours after enqueue. "
+            "After this time the agent reports failed / expired."
+        ),
+    )
+
     class Meta:
         model = Command
-        fields = ("terminal", "type", "payload", "expires_at")
+        fields = ("terminal", "type", "payload")
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance.pk and self.instance.expires_at:
+            self.initial.setdefault("expires_at_dt", ms_to_dt(self.instance.expires_at))
+        elif not self.instance.pk:
+            self.initial.setdefault("expires_at_dt", timezone.now() + timedelta(hours=24))
 
     def clean(self):
         cleaned = super().clean()
@@ -49,21 +74,32 @@ class CommandAdminForm(ModelForm):
         err = validate_enqueue_payload(cmd_type, payload)
         if err:
             raise ValidationError(err)
+        dt = cleaned.get("expires_at_dt")
+        cleaned["_expires_at_ms"] = dt_to_ms(dt) if dt else None
         return cleaned
 
 
 @admin.register(Command)
 class CommandAdmin(admin.ModelAdmin):
     form = CommandAdminForm
-    list_display = ("command_id", "terminal", "type", "status", "issued_at")
+    list_display = ("command_id", "terminal", "type", "status", "expires_at_display")
     list_filter = ("type", "status")
-    readonly_fields = ("command_id", "issued_at", "status", "result")
+    readonly_fields = ("command_id", "issued_at", "status", "result", "expires_at_display")
+
+    @admin.display(description="expires at", ordering="expires_at")
+    def expires_at_display(self, obj):
+        return format_expires_at(obj.expires_at)
 
     def save_model(self, request, obj, form, change):
         if change:
             super().save_model(request, obj, form, change)
             return
-        cmd = enqueue(obj.terminal, obj.type, obj.payload, obj.expires_at or None)
+        cmd = enqueue(
+            obj.terminal,
+            obj.type,
+            obj.payload,
+            form.cleaned_data.get("_expires_at_ms"),
+        )
         obj.pk = cmd.pk
         obj.command_id = cmd.command_id
         obj.issued_at = cmd.issued_at

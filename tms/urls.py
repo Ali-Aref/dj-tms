@@ -17,3 +17,7 @@ urlpatterns = [
         views.command_result,
     ),
 ]
+
+admin.site.site_header = 'TMS Management'                    # default: "Django Administration"
+admin.site.index_title = 'Administration'                 # default: "Site administration"
+admin.site.site_title = 'TMS' # default: "Django site admin"
