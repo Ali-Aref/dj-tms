@@ -31,5 +31,5 @@ Not implemented here, on purpose:
 
 - Verify bearer tokens; rotate and revoke them.
 - Check `capabilities` before enqueueing a type the agent does not support.
-- Sign packages; install / reboot / firmware only after the foundation is reliable.
+- Sign packages; firmware OTA only after silent install is proven on hardware.
 - Never put payment data, PINs, or plaintext keys in these messages or in logs.

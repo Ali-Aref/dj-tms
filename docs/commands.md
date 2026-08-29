@@ -40,8 +40,8 @@ After a result is stored here, poll omits that command.
 |---|---|---|
 | `ping` | `succeeded` / `pong` | `{}` |
 | `collect_inventory` | `succeeded` / `ok` | `{}` — marks inventory due |
-| `install_app` | `succeeded` / `install committed` (or vendor message) | `url` required; optional `sha256`, `packageName` |
-| `uninstall_app` | `succeeded` / `uninstall committed` or `already absent` | `packageName` required |
+| `install_app` | `succeeded` / `installed` | `url` required; optional `sha256`, `packageName` |
+| `uninstall_app` | `succeeded` / `uninstalled` or `already absent` | `packageName` required |
 | `reboot` | `succeeded` / `reboot scheduled` | optional `delayMs` (default `0`) |
 | anything else | `failed` / `unsupported:{type}` | any |
 
@@ -52,10 +52,12 @@ Enqueue validation for the three new types: [Operator API](operator-api.md). Thi
 ```json
 {
   "url": "http://10.31.11.228:3000/files/app.apk",
-  "sha256": "optional 64 hex",
+  "sha256": "7c928bb635730f3757ca66e0ab096641dea95be625d245ef619fccf1199cece6",
   "packageName": "com.example.app"
 }
 ```
+
+`sha256` is optional. When set, it must be the **SHA-256 digest of the APK file** (`sha256sum app.apk`), not a random value. Details: [Remote ops](remote-ops.md#sha-256-of-the-apk-optional-but-recommended).
 
 ### `uninstall_app` payload
 

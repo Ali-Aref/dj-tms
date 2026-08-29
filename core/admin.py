@@ -12,6 +12,7 @@ from .services import dt_to_ms, enqueue, format_expires_at, ms_to_dt, validate_e
 
 class CommandInline(admin.TabularInline):
     model = Command
+    ordering = ("-issued_at", "-id")
     extra = 0
     fields = ("command_id", "type", "status", "expires_at_display", "payload", "result")
     readonly_fields = ("command_id", "status", "expires_at_display", "result")
@@ -82,6 +83,7 @@ class CommandAdminForm(ModelForm):
 @admin.register(Command)
 class CommandAdmin(admin.ModelAdmin):
     form = CommandAdminForm
+    ordering = ("-issued_at", "-id")
     list_display = ("command_id", "terminal", "type", "status", "expires_at_display")
     list_filter = ("type", "status")
     readonly_fields = ("command_id", "issued_at", "status", "result", "expires_at_display")

@@ -32,7 +32,7 @@ Use a shorter expiry for one-shot ops (reboot now). Use a longer window if the d
 
 ## Install app (`install_app`)
 
-The agent **downloads the APK** from `url`, optionally checks SHA-256, then commits install via `PackageInstaller`.
+The agent **downloads the APK** from `url`, optionally checks SHA-256, then silent-installs via Topwise **`AidlPM.silentInstallKeepUserdata`** (local file path). No system install UI on a supported POS.
 
 ### 1. Host the APK
 
@@ -45,11 +45,25 @@ python -m http.server 8000
 
 Use `http://<your-pc-ip>:8000/myapp.apk` in the command (not `localhost` — that is the device itself).
 
-Optional: compute SHA-256 and pass it so a tampered download fails before install:
+### SHA-256 of the APK (optional but recommended)
+
+If you set `sha256`, the agent hashes the **downloaded file** and compares it. Mismatch → `failed` / `sha256 mismatch` (no install).
+
+**Hash the APK file** (same bytes you will serve at `url`):
 
 ```bash
 sha256sum myapp.apk
+# first field is the hash, e.g. 7c928bb635730f3757ca66e0ab096641dea95be625d245ef619fccf1199cece6
+
+openssl dgst -sha256 myapp.apk
+# SHA256(myapp.apk)= 7c928bb6...
 ```
+
+Use lowercase hex, 64 characters, no spaces. Re-run after **any** change to the APK.
+
+**Do not** use `openssl rand -hex 32` — that generates random bytes, not a file hash.
+
+Omit `sha256` entirely to skip verification (fine for lab tests only).
 
 ### 2. Enqueue via admin
 
@@ -65,10 +79,12 @@ sha256sum myapp.apk
 ```json
 {
   "url": "http://10.31.11.228:8000/myapp.apk",
-  "sha256": "optional 64 hex chars",
+  "sha256": "7c928bb635730f3757ca66e0ab096641dea95be625d245ef619fccf1199cece6",
   "packageName": "com.example.myapp"
 }
 ```
+
+(`sha256` from `sha256sum myapp.apk` — see [SHA-256 of the APK](#sha-256-of-the-apk-optional-but-recommended) above.)
 
 ### 3. Enqueue via curl
 
@@ -87,10 +103,10 @@ curl -s -X POST "http://HOST:3000/v1/terminals/$ID/commands" \
 
 ### 4. Success signals
 
-- Result message: `install committed` (or vendor-specific text)
+- Result message: `installed` (or `pm service unavailable` / `silent install failed`)
 - Inventory refresh on next tick shows the new package
 
-**Note:** Standard `PackageInstaller` may show a system prompt unless the device is device-owner or uses the Topwise silent-install SDK.
+**Note:** Requires TopUsdkService on the POS and `CLOUDPOS_SYSTEMDEV_INSTALL`. Failure is reported as `failed` with the vendor message; there is no user confirmation dialog.
 
 ---
 
@@ -113,7 +129,7 @@ curl -s -X POST "http://HOST:3000/v1/terminals/$ID/commands" \
   -d '{"type":"uninstall_app","payload":{"packageName":"com.example.myapp"}}'
 ```
 
-If the package is already gone, the agent still reports **`succeeded` / `already absent`**.
+If the package is already gone, the agent still reports **`succeeded` / `already absent`**. Otherwise **`uninstalled`** after `AidlPM.silentUninstall`.
 
 ---
 
@@ -146,8 +162,8 @@ Result: **`succeeded` / `reboot scheduled`**, then the device restarts.
 
 | Type | Required payload | Typical result |
 |---|---|---|
-| `install_app` | `url` | `install committed` |
-| `uninstall_app` | `packageName` | `uninstall committed` or `already absent` |
+| `install_app` | `url` | `installed` |
+| `uninstall_app` | `packageName` | `uninstalled` or `already absent` |
 | `reboot` | none (`delayMs` optional) | `reboot scheduled` |
 
 ## Troubleshooting
@@ -158,5 +174,6 @@ Result: **`succeeded` / `reboot scheduled`**, then the device restarts.
 | `expired` | Expires at was in the past before the device polled |
 | `install_app: url required` | Payload JSON missing `url` |
 | Download fails | APK URL reachable from POS (try browser on device) |
-| `sha256 mismatch` | Wrong hash or file changed |
-| Install prompt on device | Expected without silent-install / device-owner |
+| `sha256 mismatch` | Hash must be SHA-256 of the APK file (`sha256sum`), not `openssl rand -hex 32`; re-hash if the file changed |
+| `pm service unavailable` | TopUsdkService not bound; User SDK / firmware |
+| `silent install failed` | AidlPM returned false (path, signature, allowlist) |
