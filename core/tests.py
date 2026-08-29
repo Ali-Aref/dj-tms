@@ -92,6 +92,45 @@ class ApiTests(TestCase):
         code, body = self._json(
             "POST",
             f"/v1/terminals/{tid}/commands",
+            {
+                "type": "install_app",
+                "payload": {"url": "http://example.com/app.apk"},
+            },
+        )
+        self.assertEqual(code, 400)
+        self.assertIn("sha256", body["error"])
+
+        code, body = self._json(
+            "POST",
+            f"/v1/terminals/{tid}/commands",
+            {
+                "type": "install_app",
+                "payload": {
+                    "url": "http://example.com/app.apk",
+                    "sha256": "not-a-valid-hash",
+                },
+            },
+        )
+        self.assertEqual(code, 400)
+        self.assertIn("sha256 must be 64 hex chars", body["error"])
+
+        code, body = self._json(
+            "POST",
+            f"/v1/terminals/{tid}/commands",
+            {
+                "type": "install_app",
+                "payload": {
+                    "url": "http://example.com/app.apk",
+                    "sha256": "a" * 64,
+                },
+            },
+        )
+        self.assertEqual(code, 201)
+        self.assertEqual(body["type"], "install_app")
+
+        code, body = self._json(
+            "POST",
+            f"/v1/terminals/{tid}/commands",
             {"type": "reboot", "payload": {"delayMs": 0}},
         )
         self.assertEqual(code, 201)

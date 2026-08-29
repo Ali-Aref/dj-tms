@@ -32,7 +32,7 @@ Use a shorter expiry for one-shot ops (reboot now). Use a longer window if the d
 
 ## Install app (`install_app`)
 
-The agent **downloads the APK** from `url`, optionally checks SHA-256, then silent-installs via Topwise **`AidlPM.silentInstallKeepUserdata`** (local file path). No system install UI on a supported POS.
+The agent **downloads the APK** from `url`, verifies SHA-256, then silent-installs via Topwise **`AidlSystem.installApp`** (local file path). No system install UI on a supported POS.
 
 ### 1. Host the APK
 
@@ -45,9 +45,9 @@ python -m http.server 8000
 
 Use `http://<your-pc-ip>:8000/myapp.apk` in the command (not `localhost` — that is the device itself).
 
-### SHA-256 of the APK (optional but recommended)
+### SHA-256 of the APK (required)
 
-If you set `sha256`, the agent hashes the **downloaded file** and compares it. Mismatch → `failed` / `sha256 mismatch` (no install).
+The agent hashes the **downloaded file** and compares it to `sha256`. Mismatch → `failed` / `sha256 mismatch` (no install). Missing or invalid hash is rejected at enqueue time and by the agent before download.
 
 **Hash the APK file** (same bytes you will serve at `url`):
 
@@ -62,8 +62,6 @@ openssl dgst -sha256 myapp.apk
 Use lowercase hex, 64 characters, no spaces. Re-run after **any** change to the APK.
 
 **Do not** use `openssl rand -hex 32` — that generates random bytes, not a file hash.
-
-Omit `sha256` entirely to skip verification (fine for lab tests only).
 
 ### 2. Enqueue via admin
 
@@ -84,7 +82,7 @@ Omit `sha256` entirely to skip verification (fine for lab tests only).
 }
 ```
 
-(`sha256` from `sha256sum myapp.apk` — see [SHA-256 of the APK](#sha-256-of-the-apk-optional-but-recommended) above.)
+(`sha256` from `sha256sum myapp.apk` — see [SHA-256 of the APK](#sha-256-of-the-apk-required) above.)
 
 ### 3. Enqueue via curl
 
@@ -96,6 +94,7 @@ curl -s -X POST "http://HOST:3000/v1/terminals/$ID/commands" \
     "type": "install_app",
     "payload": {
       "url": "http://HOST:8000/myapp.apk",
+      "sha256": "7c928bb635730f3757ca66e0ab096641dea95be625d245ef619fccf1199cece6",
       "packageName": "com.example.myapp"
     }
   }'
@@ -129,7 +128,7 @@ curl -s -X POST "http://HOST:3000/v1/terminals/$ID/commands" \
   -d '{"type":"uninstall_app","payload":{"packageName":"com.example.myapp"}}'
 ```
 
-If the package is already gone, the agent still reports **`succeeded` / `already absent`**. Otherwise **`uninstalled`** after `AidlPM.silentUninstall`.
+If the package is already gone, the agent still reports **`succeeded` / `already absent`**. Otherwise **`uninstalled`** after `AidlSystem.uninstallApp`.
 
 ---
 
@@ -162,7 +161,7 @@ Result: **`succeeded` / `reboot scheduled`**, then the device restarts.
 
 | Type | Required payload | Typical result |
 |---|---|---|
-| `install_app` | `url` | `installed` |
+| `install_app` | `url`, `sha256` | `installed` |
 | `uninstall_app` | `packageName` | `uninstalled` or `already absent` |
 | `reboot` | none (`delayMs` optional) | `reboot scheduled` |
 
@@ -173,7 +172,8 @@ Result: **`succeeded` / `reboot scheduled`**, then the device restarts.
 | Command stays pending | POS polling? `Last sync` on device UI? Same LAN / URL? |
 | `expired` | Expires at was in the past before the device polled |
 | `install_app: url required` | Payload JSON missing `url` |
+| `install_app: sha256 required` | Payload JSON missing `sha256` |
 | Download fails | APK URL reachable from POS (try browser on device) |
 | `sha256 mismatch` | Hash must be SHA-256 of the APK file (`sha256sum`), not `openssl rand -hex 32`; re-hash if the file changed |
 | `pm service unavailable` | TopUsdkService not bound; User SDK / firmware |
-| `silent install failed` | AidlPM returned false (path, signature, allowlist) |
+| `silent install failed` | `AidlSystem.installApp` failed (path, ABI, signature, allowlist) |

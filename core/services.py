@@ -38,9 +38,10 @@ def validate_enqueue_payload(cmd_type, payload):
         if not re.match(r"^https?://", url.strip(), re.I):
             return "install_app: url must be http or https"
         sha = payload.get("sha256")
-        if sha is not None and sha != "":
-            if not isinstance(sha, str) or not re.fullmatch(r"[0-9a-fA-F]{64}", sha):
-                return "install_app: sha256 must be 64 hex chars"
+        if not sha or not isinstance(sha, str) or not sha.strip():
+            return "install_app: sha256 required"
+        if not re.fullmatch(r"[0-9a-fA-F]{64}", sha.strip()):
+            return "install_app: sha256 must be 64 hex chars"
         pkg = payload.get("packageName")
         if pkg is not None and not isinstance(pkg, str):
             return "install_app: packageName must be a string"

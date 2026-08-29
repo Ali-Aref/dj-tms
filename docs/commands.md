@@ -40,7 +40,7 @@ After a result is stored here, poll omits that command.
 |---|---|---|
 | `ping` | `succeeded` / `pong` | `{}` |
 | `collect_inventory` | `succeeded` / `ok` | `{}` — marks inventory due |
-| `install_app` | `succeeded` / `installed` | `url` required; optional `sha256`, `packageName` |
+| `install_app` | `succeeded` / `installed` | `url` and `sha256` required; optional `packageName` |
 | `uninstall_app` | `succeeded` / `uninstalled` or `already absent` | `packageName` required |
 | `reboot` | `succeeded` / `reboot scheduled` | optional `delayMs` (default `0`) |
 | anything else | `failed` / `unsupported:{type}` | any |
@@ -57,7 +57,7 @@ Enqueue validation for the three new types: [Operator API](operator-api.md). Thi
 }
 ```
 
-`sha256` is optional. When set, it must be the **SHA-256 digest of the APK file** (`sha256sum app.apk`), not a random value. Details: [Remote ops](remote-ops.md#sha-256-of-the-apk-optional-but-recommended).
+`sha256` is required. It must be the **SHA-256 digest of the APK file** (`sha256sum app.apk`), not a random value. Details: [Remote ops](remote-ops.md#sha-256-of-the-apk-required).
 
 ### `uninstall_app` payload
 
