@@ -1,4 +1,4 @@
-# Install, uninstall, and reboot
+# Install, uninstall, reboot, and agent update
 
 How to push sensitive commands from TMSExpress to a POS. The agent polls about every **60 seconds**, so expect up to one minute before work starts.
 
@@ -157,6 +157,42 @@ Result: **`succeeded` / `reboot scheduled`**, then the device restarts.
 
 ---
 
+## Update agent (`update_agent`)
+
+Use this command to update the TMS agent app itself on the POS.
+
+### Admin
+
+| Field | Value |
+|---|---|
+| Type | `update_agent` |
+| Payload | see JSON below |
+
+```json
+{
+  "url": "http://10.31.11.228:8000/tmsmanager.apk",
+  "sha256": "7c928bb635730f3757ca66e0ab096641dea95be625d245ef619fccf1199cece6",
+  "packageName": "com.example.tmsmanager"
+}
+```
+
+### curl
+
+```bash
+curl -s -X POST "http://HOST:3000/v1/terminals/$ID/commands" \
+  -H 'content-type: application/json' \
+  -d '{"type":"update_agent","payload":{"url":"http://HOST:8000/tmsmanager.apk","sha256":"YOUR_64_HEX_SHA256","packageName":"com.example.tmsmanager"}}'
+```
+
+Success result: `succeeded` / `agent updated`.
+
+Guard failures:
+
+- `packageName must be com.example.tmsmanager`
+- `update in progress`
+
+---
+
 ## Quick reference
 
 | Type | Required payload | Typical result |
@@ -164,6 +200,7 @@ Result: **`succeeded` / `reboot scheduled`**, then the device restarts.
 | `install_app` | `url`, `sha256` | `installed` |
 | `uninstall_app` | `packageName` | `uninstalled` or `already absent` |
 | `reboot` | none (`delayMs` optional) | `reboot scheduled` |
+| `update_agent` | `url`, `sha256`, `packageName` | `agent updated` |
 
 ## Troubleshooting
 
@@ -173,7 +210,10 @@ Result: **`succeeded` / `reboot scheduled`**, then the device restarts.
 | `expired` | Expires at was in the past before the device polled |
 | `install_app: url required` | Payload JSON missing `url` |
 | `install_app: sha256 required` | Payload JSON missing `sha256` |
+| `update_agent: packageName required` | Payload JSON missing `packageName` |
 | Download fails | APK URL reachable from POS (try browser on device) |
 | `sha256 mismatch` | Hash must be SHA-256 of the APK file (`sha256sum`), not `openssl rand -hex 32`; re-hash if the file changed |
+| `packageName must be com.example.tmsmanager` | `update_agent` package target must be the agent package id |
+| `update in progress` | Previous update command lock is still active (wait/retry after completion) |
 | `pm service unavailable` | TopUsdkService not bound; User SDK / firmware |
 | `silent install failed` | `AidlSystem.installApp` failed (path, ABI, signature, allowlist) |

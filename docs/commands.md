@@ -43,6 +43,7 @@ After a result is stored here, poll omits that command.
 | `install_app` | `succeeded` / `installed` | `url` and `sha256` required; optional `packageName` |
 | `uninstall_app` | `succeeded` / `uninstalled` or `already absent` | `packageName` required |
 | `reboot` | `succeeded` / `reboot scheduled` | optional `delayMs` (default `0`) |
+| `update_agent` | `succeeded` / `agent updated` | `url`, `sha256`, `packageName` required |
 | anything else | `failed` / `unsupported:{type}` | any |
 
 Enqueue validation for install/uninstall/reboot payloads lives in [Operator API](operator-api.md). The server also checks terminal `capabilities` from register and rejects unsupported command types with `400`.
@@ -70,6 +71,18 @@ Enqueue validation for install/uninstall/reboot payloads lives in [Operator API]
 ```json
 { "delayMs": 0 }
 ```
+
+### `update_agent` payload
+
+```json
+{
+  "url": "http://10.31.11.228:3000/files/tmsmanager.apk",
+  "sha256": "7c928bb635730f3757ca66e0ab096641dea95be625d245ef619fccf1199cece6",
+  "packageName": "com.example.tmsmanager"
+}
+```
+
+`update_agent` uses the same download + SHA-256 checks as `install_app`, but is dedicated to updating the installed TMS agent package.
 
 ## Idempotency
 

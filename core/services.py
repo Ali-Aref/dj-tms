@@ -15,6 +15,7 @@ COMMAND_CAPABILITIES = {
     "install_app": "install_app",
     "uninstall_app": "uninstall_app",
     "reboot": "reboot",
+    "update_agent": "update_agent",
 }
 
 
@@ -63,6 +64,21 @@ def validate_enqueue_payload(cmd_type, payload):
         delay = payload.get("delayMs")
         if delay is not None and (not isinstance(delay, (int, float)) or delay < 0):
             return "reboot: delayMs must be a number >= 0"
+        return None
+    if cmd_type == "update_agent":
+        url = payload.get("url")
+        if not url or not isinstance(url, str) or not url.strip():
+            return "update_agent: url required"
+        if not re.match(r"^https?://", url.strip(), re.I):
+            return "update_agent: url must be http or https"
+        sha = payload.get("sha256")
+        if not sha or not isinstance(sha, str) or not sha.strip():
+            return "update_agent: sha256 required"
+        if not re.fullmatch(r"[0-9a-fA-F]{64}", sha.strip()):
+            return "update_agent: sha256 must be 64 hex chars"
+        pkg = payload.get("packageName")
+        if not pkg or not isinstance(pkg, str) or not pkg.strip():
+            return "update_agent: packageName required"
         return None
     return None
 

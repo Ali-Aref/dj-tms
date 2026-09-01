@@ -26,7 +26,7 @@ python manage.py createsuperuser
 
 Open `http://<host>:3000/admin/`. Terminals show serial, vendor, model, last heartbeat. Add commands from **Commands** or the terminal inline. Payload validation matches the operator API.
 
-For **install**, **uninstall**, and **reboot** walkthroughs see [Remote ops](remote-ops.md). `install_app` requires `url` and `sha256` in the payload.
+For **install**, **uninstall**, **reboot**, and **agent update** walkthroughs see [Remote ops](remote-ops.md). `install_app` and `update_agent` require `url` and `sha256` in the payload.
 
 ## Point the agent at this server
 

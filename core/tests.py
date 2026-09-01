@@ -104,6 +104,21 @@ class ApiTests(TestCase):
         self.assertEqual(code, 400)
         self.assertIn("does not support", body["error"])
 
+        code, body = self._json(
+            "POST",
+            f"/v1/terminals/{tid}/commands",
+            {
+                "type": "update_agent",
+                "payload": {
+                    "url": "http://example.com/agent.apk",
+                    "sha256": "a" * 64,
+                    "packageName": "com.example.tmsmanager",
+                },
+            },
+        )
+        self.assertEqual(code, 400)
+        self.assertIn("does not support", body["error"])
+
         full_identity = {
             **self.identity,
             "capabilities": [
@@ -112,6 +127,7 @@ class ApiTests(TestCase):
                 "install_app",
                 "uninstall_app",
                 "reboot",
+                "update_agent",
             ],
         }
         code, body = self._json("POST", "/v1/terminals/register", full_identity)
@@ -171,6 +187,43 @@ class ApiTests(TestCase):
         )
         self.assertEqual(code, 201)
         self.assertEqual(body["type"], "reboot")
+
+        code, body = self._json(
+            "POST",
+            f"/v1/terminals/{tid}/commands",
+            {"type": "update_agent", "payload": {}},
+        )
+        self.assertEqual(code, 400)
+        self.assertIn("url required", body["error"])
+
+        code, body = self._json(
+            "POST",
+            f"/v1/terminals/{tid}/commands",
+            {
+                "type": "update_agent",
+                "payload": {
+                    "url": "http://example.com/agent.apk",
+                    "sha256": "a" * 64,
+                },
+            },
+        )
+        self.assertEqual(code, 400)
+        self.assertIn("packageName required", body["error"])
+
+        code, body = self._json(
+            "POST",
+            f"/v1/terminals/{tid}/commands",
+            {
+                "type": "update_agent",
+                "payload": {
+                    "url": "http://example.com/agent.apk",
+                    "sha256": "a" * 64,
+                    "packageName": "com.example.tmsmanager",
+                },
+            },
+        )
+        self.assertEqual(code, 201)
+        self.assertEqual(body["type"], "update_agent")
 
         code, _ = self._json("POST", f"/v1/terminals/{uuid.uuid4()}/heartbeat", {})
         self.assertEqual(code, 404)
