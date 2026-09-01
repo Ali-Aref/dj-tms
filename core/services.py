@@ -9,6 +9,14 @@ from .models import Command, CommandSeq, Terminal
 
 DAY_MS = 24 * 60 * 60 * 1000
 
+COMMAND_CAPABILITIES = {
+    "ping": "ping",
+    "collect_inventory": "collect_inventory",
+    "install_app": "install_app",
+    "uninstall_app": "uninstall_app",
+    "reboot": "reboot",
+}
+
 
 def ms_to_dt(ms):
     return datetime.fromtimestamp(ms / 1000, tz=timezone.utc)
@@ -56,6 +64,16 @@ def validate_enqueue_payload(cmd_type, payload):
         if delay is not None and (not isinstance(delay, (int, float)) or delay < 0):
             return "reboot: delayMs must be a number >= 0"
         return None
+    return None
+
+
+def validate_terminal_capability(terminal, cmd_type):
+    needed = COMMAND_CAPABILITIES.get(cmd_type)
+    if needed is None:
+        return f"unsupported type: {cmd_type}"
+    caps = (terminal.identity or {}).get("capabilities") or []
+    if needed not in caps:
+        return f"terminal does not support {cmd_type}"
     return None
 
 

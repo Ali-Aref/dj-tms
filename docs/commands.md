@@ -45,7 +45,7 @@ After a result is stored here, poll omits that command.
 | `reboot` | `succeeded` / `reboot scheduled` | optional `delayMs` (default `0`) |
 | anything else | `failed` / `unsupported:{type}` | any |
 
-Enqueue validation for the three new types: [Operator API](operator-api.md). This sample does **not** check `capabilities` before enqueue.
+Enqueue validation for install/uninstall/reboot payloads lives in [Operator API](operator-api.md). The server also checks terminal `capabilities` from register and rejects unsupported command types with `400`.
 
 ### `install_app` payload
 

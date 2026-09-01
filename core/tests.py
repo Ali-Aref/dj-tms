@@ -85,6 +85,42 @@ class ApiTests(TestCase):
         code, body = self._json(
             "POST",
             f"/v1/terminals/{tid}/commands",
+            {
+                "type": "install_app",
+                "payload": {
+                    "url": "http://example.com/app.apk",
+                    "sha256": "a" * 64,
+                },
+            },
+        )
+        self.assertEqual(code, 400)
+        self.assertIn("does not support", body["error"])
+
+        code, body = self._json(
+            "POST",
+            f"/v1/terminals/{tid}/commands",
+            {"type": "reboot", "payload": {"delayMs": 0}},
+        )
+        self.assertEqual(code, 400)
+        self.assertIn("does not support", body["error"])
+
+        full_identity = {
+            **self.identity,
+            "capabilities": [
+                "ping",
+                "collect_inventory",
+                "install_app",
+                "uninstall_app",
+                "reboot",
+            ],
+        }
+        code, body = self._json("POST", "/v1/terminals/register", full_identity)
+        self.assertEqual(code, 200)
+        self.assertEqual(body["terminalId"], tid)
+
+        code, body = self._json(
+            "POST",
+            f"/v1/terminals/{tid}/commands",
             {"type": "install_app", "payload": {}},
         )
         self.assertEqual(code, 400)

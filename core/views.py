@@ -6,7 +6,13 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
 from .models import Command, Terminal
-from .services import command_view, enqueue, terminal_view, validate_enqueue_payload
+from .services import (
+    command_view,
+    enqueue,
+    terminal_view,
+    validate_enqueue_payload,
+    validate_terminal_capability,
+)
 
 
 def _json_body(request):
@@ -115,6 +121,9 @@ def commands(request, terminal_id):
     cmd_type = body.get("type")
     if not cmd_type or not isinstance(cmd_type, str):
         return JsonResponse({"error": "type required"}, status=400)
+    cap_err = validate_terminal_capability(terminal, cmd_type)
+    if cap_err:
+        return JsonResponse({"error": cap_err}, status=400)
     payload = body.get("payload") or {}
     err = validate_enqueue_payload(cmd_type, payload)
     if err:

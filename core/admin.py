@@ -7,7 +7,14 @@ from django.forms import ModelForm
 from django.utils import timezone
 
 from .models import Command, Terminal
-from .services import dt_to_ms, enqueue, format_expires_at, ms_to_dt, validate_enqueue_payload
+from .services import (
+    dt_to_ms,
+    enqueue,
+    format_expires_at,
+    ms_to_dt,
+    validate_enqueue_payload,
+    validate_terminal_capability,
+)
 
 
 class CommandInline(admin.TabularInline):
@@ -70,7 +77,12 @@ class CommandAdminForm(ModelForm):
 
     def clean(self):
         cleaned = super().clean()
+        terminal = cleaned.get("terminal")
         cmd_type = cleaned.get("type")
+        if terminal and cmd_type:
+            cap_err = validate_terminal_capability(terminal, cmd_type)
+            if cap_err:
+                raise ValidationError(cap_err)
         payload = cleaned.get("payload") or {}
         err = validate_enqueue_payload(cmd_type, payload)
         if err:
