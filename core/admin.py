@@ -1,12 +1,14 @@
+import json
 from datetime import timedelta
 
 from django import forms
 from django.contrib import admin
 from django.core.exceptions import ValidationError
 from django.forms import ModelForm
+from django.utils.html import format_html
 from django.utils import timezone
 
-from .models import Command, Terminal
+from .models import Command, Terminal, TerminalEvent
 from .services import (
     dt_to_ms,
     enqueue,
@@ -98,11 +100,29 @@ class CommandAdmin(admin.ModelAdmin):
     ordering = ("-issued_at", "-id")
     list_display = ("command_id", "terminal", "type", "status", "expires_at_display")
     list_filter = ("type", "status")
-    readonly_fields = ("command_id", "issued_at", "status", "result", "expires_at_display")
+    readonly_fields = ("command_id", "issued_at", "status", "result", "expires_at_display", "terminal_events")
 
     @admin.display(description="expires at", ordering="expires_at")
     def expires_at_display(self, obj):
         return format_expires_at(obj.expires_at)
+
+    @admin.display(description="terminal events")
+    def terminal_events(self, obj):
+        if not obj.pk:
+            return "-"
+        events = TerminalEvent.objects.filter(
+            terminal=obj.terminal,
+            command_id=obj.command_id,
+        ).order_by("-event_at", "-id")
+        if not events:
+            return "-"
+        lines = []
+        for event in events:
+            meta = json.dumps(event.meta, separators=(",", ":"))
+            lines.append(
+                f"{event.event_at} [{event.level}] {event.kind}: {event.message} meta={meta}"
+            )
+        return format_html("<pre>{}</pre>", "\n".join(lines))
 
     def save_model(self, request, obj, form, change):
         if change:
