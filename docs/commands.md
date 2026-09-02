@@ -1,6 +1,7 @@
 # Commands
 
 Commands are vendor-neutral. The server assigns `id`, `issuedAt`, and default `expiresAt`. The agent runs handlers locally and reports a terminal status.
+Agent poll/result routes require `Authorization: Bearer {token}` for known terminals.
 
 ## Wire object (poll)
 

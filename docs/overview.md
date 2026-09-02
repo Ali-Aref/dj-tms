@@ -8,7 +8,7 @@ Canonical agent intent lives in TMSManager `llm/purpose.md`. This sample covers 
 
 | Choice | Behavior |
 |---|---|
-| No auth | Register still returns a `token` because the agent requires it. The server never checks `Authorization`. |
+| Bearer auth on agent routes | Register returns a `token`; terminal-scoped agent routes require `Authorization: Bearer {token}` for known terminals. |
 | Vendor-neutral | No Topwise / PAX SDK. Identity fields (`vendor`, `model`, `firmware`) are stored as JSON. |
 | SQLite | Terminals and commands survive restart in `db.sqlite3`. Same `serialNumber` → same `terminalId` and `token`. |
 | Outbound poll | The device calls the server. There is no push or MQTT. |
@@ -29,7 +29,7 @@ First register in this sample also enqueues a `ping` so the first poll proves co
 
 Not implemented here, on purpose:
 
-- Verify bearer tokens; rotate and revoke them.
+- Rotate and revoke bearer tokens.
 - Check `capabilities` before enqueueing a type the agent does not support.
 - Sign packages; firmware OTA only after silent install is proven on hardware.
 - Never put payment data, PINs, or plaintext keys in these messages or in logs.

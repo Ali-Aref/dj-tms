@@ -18,10 +18,12 @@ class ApiTests(TestCase):
             "capabilities": ["ping", "collect_inventory"],
         }
 
-    def _json(self, method, path, body=None):
+    def _json(self, method, path, body=None, auth=None):
         kwargs = {"content_type": "application/json"}
         if body is not None:
             kwargs["data"] = json.dumps(body)
+        if auth is not None:
+            kwargs["HTTP_AUTHORIZATION"] = auth
         if method == "GET":
             res = self.client.get(path, **kwargs)
         else:
@@ -35,6 +37,7 @@ class ApiTests(TestCase):
         self.assertTrue(body["terminalId"])
         self.assertTrue(body["token"])
         tid = body["terminalId"]
+        token = body["token"]
 
         code, body = self._json("POST", "/v1/terminals/register", self.identity)
         self.assertEqual(tid, body["terminalId"])
@@ -44,6 +47,7 @@ class ApiTests(TestCase):
             "POST",
             f"/v1/terminals/{tid}/heartbeat",
             {"protocolVersion": 1, "batteryPercent": 80, "storageFreeBytes": 1, "network": "wifi"},
+            auth=f"Bearer {token}",
         )
         self.assertEqual(code, 204)
 
@@ -56,10 +60,11 @@ class ApiTests(TestCase):
                 "firmware": "1",
                 "apps": [{"packageName": "a.b", "versionName": "1.0", "versionCode": 1}],
             },
+            auth=f"Bearer {token}",
         )
         self.assertEqual(code, 204)
 
-        code, body = self._json("GET", f"/v1/terminals/{tid}/commands")
+        code, body = self._json("GET", f"/v1/terminals/{tid}/commands", auth=f"Bearer {token}")
         self.assertEqual(code, 200)
         self.assertEqual(len(body["commands"]), 1)
         self.assertEqual(body["commands"][0]["type"], "ping")
@@ -69,17 +74,18 @@ class ApiTests(TestCase):
             "POST",
             f"/v1/terminals/{tid}/commands/{ping_id}/result",
             {"protocolVersion": 1, "status": "succeeded", "message": "pong", "completedAt": 1},
+            auth=f"Bearer {token}",
         )
         self.assertEqual(code, 204)
 
-        code, body = self._json("GET", f"/v1/terminals/{tid}/commands")
+        code, body = self._json("GET", f"/v1/terminals/{tid}/commands", auth=f"Bearer {token}")
         self.assertEqual(body["commands"], [])
 
         code, body = self._json(
             "POST", f"/v1/terminals/{tid}/commands", {"type": "collect_inventory"}
         )
         self.assertEqual(code, 201)
-        code, body = self._json("GET", f"/v1/terminals/{tid}/commands")
+        code, body = self._json("GET", f"/v1/terminals/{tid}/commands", auth=f"Bearer {token}")
         self.assertEqual(body["commands"][0]["type"], "collect_inventory")
 
         code, body = self._json(
@@ -227,6 +233,44 @@ class ApiTests(TestCase):
 
         code, _ = self._json("POST", f"/v1/terminals/{uuid.uuid4()}/heartbeat", {})
         self.assertEqual(code, 404)
+
+    def test_agent_routes_require_bearer_auth(self):
+        code, body = self._json("POST", "/v1/terminals/register", self.identity)
+        self.assertEqual(code, 200)
+        tid = body["terminalId"]
+        token = body["token"]
+
+        code, body = self._json("GET", f"/v1/terminals/{tid}/commands")
+        self.assertEqual(code, 401)
+        self.assertEqual(body["error"], "unauthorized")
+
+        code, body = self._json(
+            "GET",
+            f"/v1/terminals/{tid}/commands",
+            auth="Bearer wrong-token",
+        )
+        self.assertEqual(code, 401)
+        self.assertEqual(body["error"], "unauthorized")
+
+        code, _ = self._json(
+            "POST",
+            f"/v1/terminals/{tid}/heartbeat",
+            {"protocolVersion": 1, "network": "wifi"},
+            auth=f"Bearer {token}",
+        )
+        self.assertEqual(code, 204)
+
+        code, body = self._json(
+            "POST",
+            f"/v1/terminals/{tid}/commands/unknown/result",
+            {"protocolVersion": 1, "status": "succeeded", "message": "ok", "completedAt": 1},
+            auth=f"Bearer {token}",
+        )
+        self.assertEqual(code, 204)
+
+        code, body = self._json("GET", f"/v1/terminals/{uuid.uuid4()}/commands")
+        self.assertEqual(code, 404)
+        self.assertEqual(body["error"], "unknown terminal")
 
     def test_health(self):
         code, body = self._json("GET", "/health")

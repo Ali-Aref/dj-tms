@@ -28,6 +28,24 @@ def _terminal_or_404(terminal_id):
         return None
 
 
+def _bearer_token(request):
+    auth = request.META.get("HTTP_AUTHORIZATION", "")
+    if not auth.startswith("Bearer "):
+        return None
+    token = auth[7:].strip()
+    return token or None
+
+
+def _terminal_and_auth_or_error(request, terminal_id):
+    terminal = _terminal_or_404(terminal_id)
+    if not terminal:
+        return None, JsonResponse({"error": "unknown terminal"}, status=404)
+    token = _bearer_token(request)
+    if token != str(terminal.token):
+        return None, JsonResponse({"error": "unauthorized"}, status=401)
+    return terminal, None
+
+
 @csrf_exempt
 @require_http_methods(["GET"])
 def health(request):
@@ -76,9 +94,9 @@ def terminal_detail(request, terminal_id):
 @csrf_exempt
 @require_http_methods(["POST"])
 def heartbeat(request, terminal_id):
-    terminal = _terminal_or_404(terminal_id)
-    if not terminal:
-        return JsonResponse({"error": "unknown terminal"}, status=404)
+    terminal, error = _terminal_and_auth_or_error(request, terminal_id)
+    if error:
+        return error
     try:
         body = _json_body(request)
     except json.JSONDecodeError:
@@ -91,9 +109,9 @@ def heartbeat(request, terminal_id):
 @csrf_exempt
 @require_http_methods(["POST"])
 def inventory(request, terminal_id):
-    terminal = _terminal_or_404(terminal_id)
-    if not terminal:
-        return JsonResponse({"error": "unknown terminal"}, status=404)
+    terminal, error = _terminal_and_auth_or_error(request, terminal_id)
+    if error:
+        return error
     try:
         body = _json_body(request)
     except json.JSONDecodeError:
@@ -110,6 +128,9 @@ def commands(request, terminal_id):
     if not terminal:
         return JsonResponse({"error": "unknown terminal"}, status=404)
     if request.method == "GET":
+        token = _bearer_token(request)
+        if token != str(terminal.token):
+            return JsonResponse({"error": "unauthorized"}, status=401)
         pending = terminal.commands.filter(result__isnull=True)
         return JsonResponse(
             {"commands": [command_view(c, include_result=False) for c in pending]}
@@ -135,9 +156,9 @@ def commands(request, terminal_id):
 @csrf_exempt
 @require_http_methods(["POST"])
 def command_result(request, terminal_id, command_id):
-    terminal = _terminal_or_404(terminal_id)
-    if not terminal:
-        return JsonResponse({"error": "unknown terminal"}, status=404)
+    terminal, error = _terminal_and_auth_or_error(request, terminal_id)
+    if error:
+        return error
     try:
         body = _json_body(request)
     except json.JSONDecodeError:

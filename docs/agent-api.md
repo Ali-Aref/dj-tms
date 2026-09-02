@@ -1,8 +1,11 @@
 # Agent API
 
-Paths are relative to `/v1`. The agent sends `Accept: application/json` and, after register, `Authorization: Bearer {token}`. This sample ignores the header.
+Paths are relative to `/v1`. The agent sends `Accept: application/json` and, after register, `Authorization: Bearer {token}`.
 
-Unknown `terminalId` → `404` `{ "error": "unknown terminal" }` for every route that takes an id.
+Auth semantics on terminal-scoped agent routes:
+
+- unknown `terminalId` -> `404` `{ "error": "unknown terminal" }`
+- known terminal with missing/invalid bearer -> `401` `{ "error": "unauthorized" }`
 
 ## `POST /terminals/register`
 
@@ -58,6 +61,7 @@ Last-seen liveness. Body is stored with a server `receivedAt` (epoch ms). Respon
 `network` from the agent: `wifi` | `cellular` | `ethernet` | `offline` | `other` | `unknown`.
 
 **Response:** `204` empty.
+Auth failure: `401`.
 
 ## `POST /terminals/{terminalId}/inventory`
 
@@ -77,6 +81,7 @@ Installed-app snapshot. Stored with `receivedAt`. Can be large (full package lis
 ```
 
 **Response:** `204` empty.
+Auth failure: `401`.
 
 ## `GET /terminals/{terminalId}/commands`
 
@@ -99,6 +104,7 @@ Pending work for this terminal. Returns only commands that have **no result yet*
 ```
 
 Idle tick: `{ "commands": [] }`. Field rules and types: [Commands](commands.md).
+Auth failure: `401`.
 
 ## `POST /terminals/{terminalId}/commands/{commandId}/result`
 
@@ -120,5 +126,6 @@ Agent finished (or failed) a command. At-least-once: the agent may POST the same
 If `commandId` is known, the command is marked done and dropped from later polls. Unknown `commandId` still returns `204` so the agent outbox can drain.
 
 **Response:** `204` empty.
+Auth failure: `401`.
 
 To push work without waiting for the auto-`ping`, use the [Operator API](operator-api.md).
