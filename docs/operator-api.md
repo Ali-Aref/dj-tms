@@ -32,7 +32,17 @@ All terminals in the database.
 
 ## `GET /v1/terminals/{terminalId}`
 
-Same object as one element of the list above. Unknown id → `404`.
+Same object as one element of the list above, plus a latest-events list (up to 20 items). Unknown id → `404`.
+
+Each event item contains:
+
+- `commandId` (nullable)
+- `kind`
+- `level`
+- `message`
+- `meta` (JSON object)
+- `eventAt`
+- `receivedAt`
 
 ## `POST /v1/terminals/{terminalId}/commands`
 

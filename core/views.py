@@ -5,7 +5,7 @@ from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
-from .models import Command, Terminal
+from .models import Command, Terminal, TerminalEvent
 from .services import (
     command_view,
     enqueue,
@@ -87,8 +87,8 @@ def terminal_detail(request, terminal_id):
     terminal = _terminal_or_404(terminal_id)
     if not terminal:
         return JsonResponse({"error": "unknown terminal"}, status=404)
-    terminal = Terminal.objects.prefetch_related("commands").get(pk=terminal.pk)
-    return JsonResponse(terminal_view(terminal))
+    terminal = Terminal.objects.prefetch_related("commands", "events").get(pk=terminal.pk)
+    return JsonResponse(terminal_view(terminal, include_events=True))
 
 
 @csrf_exempt
@@ -175,4 +175,50 @@ def command_result(request, terminal_id, command_id):
         cmd.status = result.get("status") or "succeeded"
         cmd.result = result
         cmd.save(update_fields=["status", "result"])
+    return HttpResponse(status=204)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def terminal_event(request, terminal_id):
+    terminal, error = _terminal_and_auth_or_error(request, terminal_id)
+    if error:
+        return error
+    try:
+        body = _json_body(request)
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "invalid json"}, status=400)
+
+    kind = body.get("kind")
+    message = body.get("message")
+    level = body.get("level") or "info"
+    command_id = body.get("commandId") or ""
+    meta = body.get("meta") or {}
+    event_at = body.get("eventAt")
+
+    if not kind or not isinstance(kind, str):
+        return JsonResponse({"error": "kind required"}, status=400)
+    if not message or not isinstance(message, str):
+        return JsonResponse({"error": "message required"}, status=400)
+    if not isinstance(level, str):
+        return JsonResponse({"error": "level must be a string"}, status=400)
+    if command_id and not isinstance(command_id, str):
+        return JsonResponse({"error": "commandId must be a string"}, status=400)
+    if not isinstance(meta, dict):
+        return JsonResponse({"error": "meta must be an object"}, status=400)
+
+    now = int(time.time() * 1000)
+    if not isinstance(event_at, (int, float)):
+        event_at = now
+
+    TerminalEvent.objects.create(
+        terminal=terminal,
+        command_id=command_id.strip(),
+        kind=kind.strip(),
+        level=level.strip() or "info",
+        message=message,
+        meta=meta,
+        event_at=int(event_at),
+        received_at=now,
+    )
     return HttpResponse(status=204)

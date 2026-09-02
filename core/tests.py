@@ -272,6 +272,44 @@ class ApiTests(TestCase):
         self.assertEqual(code, 404)
         self.assertEqual(body["error"], "unknown terminal")
 
+        code, body = self._json(
+            "POST",
+            f"/v1/terminals/{tid}/events",
+            {"kind": "install_started", "message": "start", "eventAt": 1},
+        )
+        self.assertEqual(code, 401)
+        self.assertEqual(body["error"], "unauthorized")
+
+    def test_events_endpoint_persists_and_shows_in_terminal_detail(self):
+        code, body = self._json("POST", "/v1/terminals/register", self.identity)
+        self.assertEqual(code, 200)
+        tid = body["terminalId"]
+        token = body["token"]
+
+        code, _ = self._json(
+            "POST",
+            f"/v1/terminals/{tid}/events",
+            {
+                "protocolVersion": 1,
+                "kind": "download_started",
+                "level": "info",
+                "message": "http://files.example.com/a.apk",
+                "commandId": "c-123",
+                "eventAt": 1789000000000,
+                "meta": {"type": "install_app", "urlHost": "files.example.com"},
+            },
+            auth=f"Bearer {token}",
+        )
+        self.assertEqual(code, 204)
+
+        code, body = self._json("GET", f"/v1/terminals/{tid}")
+        self.assertEqual(code, 200)
+        self.assertEqual(len(body["events"]), 1)
+        event = body["events"][0]
+        self.assertEqual(event["kind"], "download_started")
+        self.assertEqual(event["commandId"], "c-123")
+        self.assertEqual(event["meta"]["urlHost"], "files.example.com")
+
     def test_health(self):
         code, body = self._json("GET", "/health")
         self.assertEqual(code, 200)

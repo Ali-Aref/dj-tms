@@ -110,14 +110,18 @@ def enqueue(terminal, cmd_type, payload=None, expires_at=None):
     return cmd
 
 
-def terminal_view(terminal):
-    return {
+def terminal_view(terminal, include_events=False, event_limit=20):
+    out = {
         "terminalId": str(terminal.terminal_id),
         "identity": terminal.identity,
         "lastHeartbeat": terminal.last_heartbeat,
         "lastInventory": terminal.last_inventory,
         "commands": [command_view(c) for c in terminal.commands.all()],
     }
+    if include_events:
+        events = terminal.events.order_by("-event_at", "-id")[:event_limit]
+        out["events"] = [event_view(e) for e in reversed(list(events))]
+    return out
 
 
 def command_view(cmd, *, include_result=True):
@@ -132,6 +136,18 @@ def command_view(cmd, *, include_result=True):
         out["status"] = cmd.status
         out["result"] = cmd.result
     return out
+
+
+def event_view(event):
+    return {
+        "commandId": event.command_id or None,
+        "kind": event.kind,
+        "level": event.level,
+        "message": event.message,
+        "meta": event.meta,
+        "eventAt": event.event_at,
+        "receivedAt": event.received_at,
+    }
 
 
 # attach next_id to CommandSeq

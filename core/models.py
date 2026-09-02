@@ -33,6 +33,23 @@ class Command(models.Model):
         return f"{self.command_id} {self.type}"
 
 
+class TerminalEvent(models.Model):
+    terminal = models.ForeignKey(Terminal, on_delete=models.CASCADE, related_name="events")
+    command_id = models.CharField(max_length=64, blank=True, default="")
+    kind = models.CharField(max_length=64)
+    level = models.CharField(max_length=16, default="info")
+    message = models.TextField()
+    meta = models.JSONField(default=dict)
+    event_at = models.BigIntegerField()
+    received_at = models.BigIntegerField()
+
+    class Meta:
+        ordering = ["event_at", "id"]
+
+    def __str__(self):
+        return f"{self.terminal.serial_number} {self.kind}"
+
+
 class CommandSeq(models.Model):
     """ponytail: single-row counter for c-1, c-2 ids; upgrade: uuid if multi-process."""
 

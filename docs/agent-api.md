@@ -63,6 +63,16 @@ Last-seen liveness. Body is stored with a server `receivedAt` (epoch ms). Respon
 **Response:** `204` empty.
 Auth failure: `401`.
 
+Optional diagnostics extension:
+
+```json
+"diagnostics": {
+  "lastError": "none",
+  "outboxSize": 0,
+  "agentVersion": "1.0"
+}
+```
+
 ## `POST /terminals/{terminalId}/inventory`
 
 Installed-app snapshot. Stored with `receivedAt`. Can be large (full package list on the POS).
@@ -124,6 +134,30 @@ Agent finished (or failed) a command. At-least-once: the agent may POST the same
 `status` is lowercase: `succeeded` or `failed`. `completedAt` is the **device** clock (epoch ms); it can disagree with the server’s `issuedAt`.
 
 If `commandId` is known, the command is marked done and dropped from later polls. Unknown `commandId` still returns `204` so the agent outbox can drain.
+
+**Response:** `204` empty.
+Auth failure: `401`.
+
+## `POST /terminals/{terminalId}/events`
+
+Best-effort progress events from the agent (for install/update lifecycle visibility). These events do not replace final command results.
+
+**Request**
+
+```json
+{
+  "protocolVersion": 1,
+  "kind": "download_started",
+  "level": "info",
+  "message": "http://files.example.com/app.apk",
+  "commandId": "c-123",
+  "eventAt": 1789000000000,
+  "meta": {
+    "type": "install_app",
+    "urlHost": "files.example.com"
+  }
+}
+```
 
 **Response:** `204` empty.
 Auth failure: `401`.

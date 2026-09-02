@@ -11,6 +11,7 @@ Canonical agent intent lives in TMSManager `llm/purpose.md`. This sample covers 
 | Bearer auth on agent routes | Register returns a `token`; terminal-scoped agent routes require `Authorization: Bearer {token}` for known terminals. |
 | Vendor-neutral | No Topwise / PAX SDK. Identity fields (`vendor`, `model`, `firmware`) are stored as JSON. |
 | SQLite | Terminals and commands survive restart in `db.sqlite3`. Same `serialNumber` → same `terminalId` and `token`. |
+| Observability | Agents can post install/update lifecycle events to `/v1/terminals/{id}/events`; latest events are visible in terminal detail. |
 | Outbound poll | The device calls the server. There is no push or MQTT. |
 | Protocol v1 | `protocolVersion: 1` on agent bodies. The server does not reject other values. |
 | Django admin | Browse terminals, last heartbeat/inventory, enqueue commands. Staff login only; no agent auth. |
