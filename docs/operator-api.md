@@ -30,6 +30,8 @@ All terminals in the database.
 
 `lastHeartbeat` / `lastInventory` are `null` until the agent has posted them. `commands` is the full stored list (pending and completed). Same data is visible in Django admin at `/admin/`.
 
+Agent-supplied heartbeat diagnostics, event messages/meta, and command result strings are displayed from already-redacted persisted values. Sensitive values appear as `[REDACTED]`.
+
 ## `GET /v1/terminals/{terminalId}`
 
 Same object as one element of the list above, plus a latest-events list (up to 20 items). Unknown id → `404`.

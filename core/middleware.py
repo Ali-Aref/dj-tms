@@ -1,6 +1,8 @@
 import json
 import time
 
+from .redaction import redact_obj
+
 
 class RequestLogMiddleware:
     def __init__(self, get_response):
@@ -22,6 +24,8 @@ class RequestLogMiddleware:
                 res_body = json.loads(response.content.decode("utf-8"))
             except (json.JSONDecodeError, UnicodeDecodeError):
                 res_body = response.content.decode("utf-8", errors="replace")
+        req_body = redact_obj(req_body)
+        res_body = redact_obj(res_body)
         res_log = "null" if response.status_code == 204 or not response.content else json.dumps(res_body)
         print(
             f"{request.method} {request.path} {response.status_code} {ms}ms\n"

@@ -2,6 +2,8 @@
 
 Paths are relative to `/v1`. The agent sends `Accept: application/json` and, after register, `Authorization: Bearer {token}`.
 
+Management-plane heartbeat diagnostics, event messages/meta, and command result fields are sanitized before persistence and request/response logging. PAN-like values and values under PIN/CVV/track/KSN/token/authorization/bearer/secret/API-key/password keys become `[REDACTED]`; request and response shapes are unchanged.
+
 Auth semantics on terminal-scoped agent routes:
 
 - unknown `terminalId` -> `404` `{ "error": "unknown terminal" }`

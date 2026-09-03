@@ -15,6 +15,7 @@ Canonical agent intent lives in TMSManager `llm/purpose.md`. This sample covers 
 | Outbound poll | The device calls the server. There is no push or MQTT. |
 | Protocol v1 | `protocolVersion: 1` on agent bodies. The server does not reject other values. |
 | Django admin | Browse terminals, last heartbeat/inventory, enqueue commands. Staff login only; no agent auth. |
+| Management-data redaction | Sensitive-like heartbeat diagnostics, events, results, and HTTP body logs are masked with `[REDACTED]` before storage/output. |
 
 ## What the agent does each tick (~60s)
 

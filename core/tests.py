@@ -1,7 +1,12 @@
 import json
 import uuid
+from contextlib import redirect_stdout
+from io import StringIO
 
 from django.test import Client, TestCase
+
+from .models import Command, Terminal, TerminalEvent
+from .redaction import REDACTED, redact_obj, redact_text
 
 
 class ApiTests(TestCase):
@@ -309,6 +314,66 @@ class ApiTests(TestCase):
         self.assertEqual(event["kind"], "download_started")
         self.assertEqual(event["commandId"], "c-123")
         self.assertEqual(event["meta"]["urlHost"], "files.example.com")
+
+    def test_redaction_helpers(self):
+        self.assertEqual(redact_text("normal diagnostic"), "normal diagnostic")
+        self.assertNotIn("4111", redact_text("card 4111-1111-1111-1111 failed"))
+        self.assertEqual(redact_text("Authorization: Bearer abc.def"), f"Authorization: {REDACTED}")
+        redacted = redact_obj({"nested": [{"accessToken": "opaque-value"}], "status": "ok"})
+        self.assertEqual(redacted, {"nested": [{"accessToken": REDACTED}], "status": "ok"})
+
+    def test_agent_management_data_is_redacted_before_persistence(self):
+        _, registered = self._json("POST", "/v1/terminals/register", self.identity)
+        tid, token = registered["terminalId"], registered["token"]
+        auth = f"Bearer {token}"
+
+        self._json(
+            "POST",
+            f"/v1/terminals/{tid}/heartbeat",
+            {"diagnostics": {"lastError": "authorization=heartbeat-secret"}},
+            auth=auth,
+        )
+        self._json(
+            "POST",
+            f"/v1/terminals/{tid}/events",
+            {
+                "kind": "install_finished",
+                "message": "card 4111-1111-1111-1111 failed",
+                "meta": {"apiKey": "event-secret", "context": "readable"},
+            },
+            auth=auth,
+        )
+        command = Command.objects.filter(terminal__terminal_id=tid).first()
+        self._json(
+            "POST",
+            f"/v1/terminals/{tid}/commands/{command.command_id}/result",
+            {"status": "failed", "message": "token=result-secret", "completedAt": 1},
+            auth=auth,
+        )
+
+        terminal = Terminal.objects.get(terminal_id=tid)
+        event = TerminalEvent.objects.get(terminal=terminal)
+        command.refresh_from_db()
+        self.assertEqual(terminal.last_heartbeat["diagnostics"]["lastError"], f"authorization={REDACTED}")
+        self.assertEqual(event.message, f"card {REDACTED} failed")
+        self.assertEqual(event.meta, {"apiKey": REDACTED, "context": "readable"})
+        self.assertEqual(command.result["message"], f"token={REDACTED}")
+
+    def test_request_and_response_logs_are_redacted(self):
+        output = StringIO()
+        with redirect_stdout(output):
+            _, registered = self._json("POST", "/v1/terminals/register", self.identity)
+            self._json(
+                "POST",
+                f"/v1/terminals/{registered['terminalId']}/events",
+                {"kind": "failed", "message": "password=log-secret"},
+                auth=f"Bearer {registered['token']}",
+            )
+
+        logged = output.getvalue()
+        self.assertNotIn(registered["token"], logged)
+        self.assertNotIn("log-secret", logged)
+        self.assertIn(REDACTED, logged)
 
     def test_health(self):
         code, body = self._json("GET", "/health")

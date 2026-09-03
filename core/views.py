@@ -6,6 +6,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
 from .models import Command, Terminal, TerminalEvent
+from .redaction import redact_obj, redact_text
 from .services import (
     command_view,
     enqueue,
@@ -101,7 +102,7 @@ def heartbeat(request, terminal_id):
         body = _json_body(request)
     except json.JSONDecodeError:
         return JsonResponse({"error": "invalid json"}, status=400)
-    terminal.last_heartbeat = {**body, "receivedAt": int(time.time() * 1000)}
+    terminal.last_heartbeat = {**redact_obj(body), "receivedAt": int(time.time() * 1000)}
     terminal.save(update_fields=["last_heartbeat"])
     return HttpResponse(status=204)
 
@@ -163,13 +164,13 @@ def command_result(request, terminal_id, command_id):
         body = _json_body(request)
     except json.JSONDecodeError:
         return JsonResponse({"error": "invalid json"}, status=400)
-    result = {
+    result = redact_obj({
         "protocolVersion": body.get("protocolVersion"),
         "status": body.get("status"),
         "message": body.get("message"),
         "completedAt": body.get("completedAt"),
         "receivedAt": int(time.time() * 1000),
-    }
+    })
     cmd = Command.objects.filter(terminal=terminal, command_id=command_id).first()
     if cmd:
         cmd.status = result.get("status") or "succeeded"
@@ -216,8 +217,8 @@ def terminal_event(request, terminal_id):
         command_id=command_id.strip(),
         kind=kind.strip(),
         level=level.strip() or "info",
-        message=message,
-        meta=meta,
+        message=redact_text(message),
+        meta=redact_obj(meta),
         event_at=int(event_at),
         received_at=now,
     )
