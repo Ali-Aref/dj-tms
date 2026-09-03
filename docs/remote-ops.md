@@ -25,8 +25,10 @@ Use a shorter expiry for one-shot ops (reboot now). Use a longer window if the d
 ## Prerequisites
 
 - TMS running: `python manage.py runserver 0.0.0.0:3000`
-- POS registered (`TMS_BASE_URL` = `http://<host>:3000/v1`)
+- POS approved and shown as `active` (`TMS_BASE_URL` = `http://<host>:3000/v1`)
 - Terminal id from **Admin → Terminals** or `GET /v1/terminals`
+
+Pending, deleted, and decommissioned terminals reject new commands with `terminal is not active`. Revoking or decommissioning also stops delivery of commands already waiting on that terminal; the retained rows remain visible for history.
 
 ---
 

@@ -41,10 +41,22 @@ def _bearer_token(request):
 def _terminal_and_auth_or_error(request, terminal_id):
     terminal = _terminal_or_404(terminal_id)
     if not terminal:
-        return None, JsonResponse({"error": "unknown terminal"}, status=404)
+        return None, JsonResponse(
+            {"error": "unknown_terminal", "code": "unknown_terminal"}, status=404
+        )
+    if terminal.status == Terminal.Status.DECOMMISSIONED:
+        return None, JsonResponse(
+            {"error": "terminal_blocked", "code": "terminal_decommissioned"}, status=403
+        )
+    if terminal.status != Terminal.Status.ACTIVE:
+        return None, JsonResponse(
+            {"error": "unauthorized", "code": "terminal_revoked"}, status=401
+        )
     token = _bearer_token(request)
     if token != str(terminal.token):
-        return None, JsonResponse({"error": "unauthorized"}, status=401)
+        return None, JsonResponse(
+            {"error": "unauthorized", "code": "terminal_revoked"}, status=401
+        )
     return terminal, None
 
 
@@ -68,11 +80,20 @@ def register(request):
         serial_number=serial,
         defaults={"identity": body},
     )
-    if not created:
-        terminal.identity = body
+    if terminal.status == Terminal.Status.DECOMMISSIONED:
+        return JsonResponse(
+            {"error": "terminal_blocked", "code": "terminal_decommissioned"}, status=403
+        )
+    terminal.identity = body
+    if terminal.status == Terminal.Status.DELETED:
+        terminal.status = Terminal.Status.PENDING
+        terminal.save(update_fields=["identity", "status"])
+    elif not created:
         terminal.save(update_fields=["identity"])
-    else:
-        enqueue(terminal, "ping")
+    if terminal.status == Terminal.Status.PENDING:
+        return JsonResponse(
+            {"error": "pending approval", "code": "terminal_pending_approval"}, status=202
+        )
     return JsonResponse({"terminalId": str(terminal.terminal_id), "token": str(terminal.token)})
 
 
@@ -170,16 +191,18 @@ def _number(value):
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
 def commands(request, terminal_id):
-    terminal = _terminal_or_404(terminal_id)
-    if not terminal:
-        return JsonResponse({"error": "unknown terminal"}, status=404)
     if request.method == "GET":
-        token = _bearer_token(request)
-        if token != str(terminal.token):
-            return JsonResponse({"error": "unauthorized"}, status=401)
+        terminal, error = _terminal_and_auth_or_error(request, terminal_id)
+        if error:
+            return error
         pending = terminal.commands.filter(result__isnull=True)
         return JsonResponse(
             {"commands": [command_view(c, include_result=False) for c in pending]}
+        )
+    terminal = _terminal_or_404(terminal_id)
+    if not terminal:
+        return JsonResponse(
+            {"error": "unknown_terminal", "code": "unknown_terminal"}, status=404
         )
     try:
         body = _json_body(request)

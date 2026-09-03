@@ -90,6 +90,8 @@ def validate_enqueue_payload(cmd_type, payload):
 
 
 def validate_terminal_capability(terminal, cmd_type):
+    if terminal.status != Terminal.Status.ACTIVE:
+        return "terminal is not active"
     needed = COMMAND_CAPABILITIES.get(cmd_type)
     if needed is None:
         return f"unsupported type: {cmd_type}"
@@ -119,6 +121,7 @@ def enqueue(terminal, cmd_type, payload=None, expires_at=None):
 def terminal_view(terminal, include_events=False, event_limit=20):
     out = {
         "terminalId": str(terminal.terminal_id),
+        "status": terminal.status,
         "identity": terminal.identity,
         "lastHeartbeat": terminal.last_heartbeat,
         "lastInventory": terminal.last_inventory,

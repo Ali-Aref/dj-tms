@@ -4,9 +4,16 @@ from django.db import models
 
 
 class Terminal(models.Model):
+    class Status(models.TextChoices):
+        PENDING = "pending", "Pending approval"
+        ACTIVE = "active", "Active"
+        DELETED = "deleted", "Deleted / revoked"
+        DECOMMISSIONED = "decommissioned", "Decommissioned"
+
     terminal_id = models.UUIDField(unique=True, default=uuid.uuid4, editable=False)
     token = models.UUIDField(default=uuid.uuid4, editable=False)
     serial_number = models.CharField(max_length=255, unique=True)
+    status = models.CharField(max_length=32, choices=Status.choices, default=Status.PENDING)
     identity = models.JSONField(default=dict)
     last_heartbeat = models.JSONField(null=True, blank=True)
     last_inventory = models.JSONField(null=True, blank=True)

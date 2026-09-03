@@ -19,6 +19,7 @@ All terminals in the database.
   "terminals": [
     {
       "terminalId": "uuid",
+      "status": "active",
       "identity": { "serialNumber": "…", "vendor": "topwise", "…": "…" },
       "lastHeartbeat": { "batteryPercent": 100, "network": "wifi", "receivedAt": 0 },
       "lastInventory": { "osVersion": "13", "apps": [], "receivedAt": 0 },
@@ -30,6 +31,8 @@ All terminals in the database.
 ```
 
 `lastHeartbeat`, `lastInventory`, and `lastLocation` are `null` until the agent has posted them. `lastLocation` is only the newest accepted location, not a history; inspect it here or in Django admin at `/admin/` (**Terminals** list **last location** column, or the terminal’s `last_location` field). `commands` is the full stored list (pending and completed). There is no map view in this sample.
+
+`status` is `pending`, `active`, `deleted`, or `decommissioned`. Only active terminals can receive commands.
 
 Agent-supplied heartbeat diagnostics, event messages/meta, and command result strings are displayed from already-redacted persisted values. Sensitive values appear as `[REDACTED]`.
 
@@ -67,7 +70,7 @@ Enqueue work. The next agent poll will include it until a result is posted.
 | `payload` | no | `{}` |
 | `expiresAt` | no | now + 24h (epoch ms on wire; use admin date/time picker in Django) |
 
-Missing `type` → `400` `{ "error": "type required" }`.
+Missing `type` → `400` `{ "error": "type required" }`. A non-active terminal returns `400 {"error":"terminal is not active"}`.
 
 **Response `201`** — the stored command, including `status: "pending"` and `result: null`.
 

@@ -3,10 +3,13 @@ import uuid
 from contextlib import redirect_stdout
 from io import StringIO
 
+from django.contrib import admin
 from django.test import Client, TestCase
 
+from .admin import TerminalAdmin
 from .models import Command, Terminal, TerminalEvent
 from .redaction import REDACTED, redact_obj, redact_text
+from .services import enqueue
 
 
 class ApiTests(TestCase):
@@ -22,6 +25,12 @@ class ApiTests(TestCase):
             "agentVersion": "1.0",
             "capabilities": ["ping", "collect_inventory"],
         }
+        self.terminal = Terminal.objects.create(
+            serial_number=self.identity["serialNumber"],
+            identity=self.identity,
+            status=Terminal.Status.ACTIVE,
+        )
+        enqueue(self.terminal, "ping")
 
     def _json(self, method, path, body=None, auth=None):
         kwargs = {"content_type": "application/json"}
@@ -85,6 +94,7 @@ class ApiTests(TestCase):
         self.assertEqual(code, 204)
         code, terminal = self._json("GET", f"/v1/terminals/{tid}")
         self.assertEqual(code, 200)
+        self.assertEqual(terminal["status"], Terminal.Status.ACTIVE)
         self.assertEqual(terminal["lastLocation"]["latitude"], 34.5)
         self.assertIn("receivedAt", terminal["lastLocation"])
 
@@ -319,7 +329,7 @@ class ApiTests(TestCase):
 
         code, body = self._json("GET", f"/v1/terminals/{uuid.uuid4()}/commands")
         self.assertEqual(code, 404)
-        self.assertEqual(body["error"], "unknown terminal")
+        self.assertEqual(body, {"error": "unknown_terminal", "code": "unknown_terminal"})
 
         code, body = self._json(
             "POST",
@@ -461,3 +471,96 @@ class ApiTests(TestCase):
         code, body = self._json("POST", "/v1/terminals/register", self.identity)
         self.assertEqual(body["terminalId"], tid)
         self.assertEqual(body["token"], token)
+
+    def test_new_terminal_waits_for_approval(self):
+        identity = {**self.identity, "serialNumber": "SN-PENDING"}
+
+        code, body = self._json("POST", "/v1/terminals/register", identity)
+
+        self.assertEqual(code, 202)
+        self.assertEqual(body["code"], "terminal_pending_approval")
+        self.assertNotIn("token", body)
+        terminal = Terminal.objects.get(serial_number="SN-PENDING")
+        self.assertEqual(terminal.status, Terminal.Status.PENDING)
+        self.assertFalse(terminal.commands.exists())
+
+        old_token = terminal.token
+        TerminalAdmin(Terminal, admin.site).approve_selected(
+            None, Terminal.objects.filter(pk=terminal.pk)
+        )
+        terminal.refresh_from_db()
+        self.assertEqual(terminal.status, Terminal.Status.ACTIVE)
+        self.assertNotEqual(terminal.token, old_token)
+        self.assertEqual(terminal.commands.filter(type="ping").count(), 1)
+        TerminalAdmin(Terminal, admin.site).approve_selected(
+            None, Terminal.objects.filter(pk=terminal.pk)
+        )
+        self.assertEqual(terminal.commands.filter(type="ping").count(), 1)
+
+        code, body = self._json("POST", "/v1/terminals/register", identity)
+        self.assertEqual(code, 200)
+        self.assertEqual(body["terminalId"], str(terminal.terminal_id))
+        self.assertEqual(body["token"], str(terminal.token))
+
+    def test_revoke_preserves_history_and_allows_pending_reenrollment(self):
+        token = self.terminal.token
+        TerminalEvent.objects.create(
+            terminal=self.terminal,
+            kind="before_revoke",
+            message="kept",
+            event_at=1,
+            received_at=1,
+        )
+
+        TerminalAdmin(Terminal, admin.site).revoke_selected(
+            None, Terminal.objects.filter(pk=self.terminal.pk)
+        )
+
+        code, body = self._json(
+            "GET",
+            f"/v1/terminals/{self.terminal.terminal_id}/commands",
+            auth=f"Bearer {token}",
+        )
+        self.assertEqual(code, 401)
+        self.assertEqual(body["code"], "terminal_revoked")
+
+        code, body = self._json("POST", "/v1/terminals/register", self.identity)
+        self.assertEqual(code, 202)
+        self.assertEqual(body["code"], "terminal_pending_approval")
+        self.terminal.refresh_from_db()
+        self.assertEqual(self.terminal.status, Terminal.Status.PENDING)
+        self.assertTrue(self.terminal.commands.exists())
+        self.assertTrue(self.terminal.events.exists())
+
+        code, body = self._json(
+            "POST",
+            f"/v1/terminals/{self.terminal.terminal_id}/commands",
+            {"type": "ping"},
+        )
+        self.assertEqual(code, 400)
+        self.assertEqual(body["error"], "terminal is not active")
+
+    def test_decommission_blocks_routes_and_registration_until_reenrollment_allowed(self):
+        token = self.terminal.token
+        terminal_admin = TerminalAdmin(Terminal, admin.site)
+        queryset = Terminal.objects.filter(pk=self.terminal.pk)
+        terminal_admin.decommission_selected(None, queryset)
+
+        code, body = self._json(
+            "POST",
+            f"/v1/terminals/{self.terminal.terminal_id}/heartbeat",
+            {},
+            auth=f"Bearer {token}",
+        )
+        self.assertEqual(code, 403)
+        self.assertEqual(body["code"], "terminal_decommissioned")
+
+        code, body = self._json("POST", "/v1/terminals/register", self.identity)
+        self.assertEqual(code, 403)
+        self.assertEqual(body["code"], "terminal_decommissioned")
+
+        terminal_admin.allow_reenrollment(None, queryset)
+        code, body = self._json("POST", "/v1/terminals/register", self.identity)
+        self.assertEqual(code, 202)
+        self.assertEqual(body["code"], "terminal_pending_approval")
+        self.assertFalse(terminal_admin.has_delete_permission(None, self.terminal))

@@ -6,12 +6,18 @@ Management-plane heartbeat diagnostics, event messages/meta, and command result 
 
 Auth semantics on terminal-scoped agent routes:
 
-- unknown `terminalId` -> `404` `{ "error": "unknown terminal" }`
-- known terminal with missing/invalid bearer -> `401` `{ "error": "unauthorized" }`
+| Condition | Response |
+|---|---|
+| unknown `terminalId` | `404 {"error":"unknown_terminal","code":"unknown_terminal"}` |
+| active terminal with missing/invalid bearer | `401 {"error":"unauthorized","code":"terminal_revoked"}` |
+| deleted, pending, or token-rotated terminal | `401 {"error":"unauthorized","code":"terminal_revoked"}` |
+| decommissioned terminal | `403 {"error":"terminal_blocked","code":"terminal_decommissioned"}` |
+
+Terminal lifecycle is `pending` → `active` → `deleted` or `decommissioned`. Delete/revoke preserves the row and allows a new pending enrollment request. Decommission blocks both authenticated routes and registration until an operator explicitly allows re-enrollment.
 
 ## `POST /terminals/register`
 
-Creates or reuses a terminal. No bearer. `serialNumber` is the idempotency key.
+Creates or reuses an enrollment request. No bearer. `serialNumber` is the idempotency key.
 
 **Request**
 
@@ -30,20 +36,30 @@ Creates or reuses a terminal. No bearer. `serialNumber` is the idempotency key.
 
 | Field | Required by this server | Notes |
 |---|---|---|
-| `serialNumber` | yes (non-empty string) | Same serial → same `terminalId` and `token`; identity JSON is overwritten |
+| `serialNumber` | yes (non-empty string) | Same serial finds the retained terminal row; credentials depend on its lifecycle status |
 | other fields | no | Stored as-is on the terminal |
 
 Missing `serialNumber` → `400` `{ "error": "serialNumber required" }`.
 
-**Response `200`**
+An active terminal receives **`200`**:
 
 ```json
 { "terminalId": "uuid", "token": "uuid" }
 ```
 
-The agent fails register if either field is blank.
+Only active terminals receive credentials. A new, pending, or previously deleted enrollment receives **`202`** and no credentials:
 
-On **first** insert only, the server enqueues a `ping` (see [Commands](commands.md)). Re-register does not enqueue another ping.
+```json
+{ "error": "pending approval", "code": "terminal_pending_approval" }
+```
+
+A decommissioned serial receives **`403`**:
+
+```json
+{ "error": "terminal_blocked", "code": "terminal_decommissioned" }
+```
+
+Approval rotates the token, changes the terminal to active, and enqueues a `ping`. Re-registering an active terminal updates identity and returns its current credentials.
 
 ## `POST /terminals/{terminalId}/heartbeat`
 

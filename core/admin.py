@@ -1,4 +1,5 @@
 import json
+import uuid
 from datetime import timedelta
 
 from django import forms
@@ -34,10 +35,52 @@ class CommandInline(admin.TabularInline):
 
 @admin.register(Terminal)
 class TerminalAdmin(admin.ModelAdmin):
-    list_display = ("serial_number", "terminal_id", "vendor", "model", "heartbeat_summary", "location_summary")
+    list_display = ("serial_number", "terminal_id", "status", "vendor", "model", "heartbeat_summary", "location_summary")
+    list_filter = ("status",)
     search_fields = ("serial_number", "terminal_id")
-    readonly_fields = ("terminal_id", "token", "identity", "last_heartbeat", "last_inventory", "last_location")
+    readonly_fields = (
+        "terminal_id",
+        "token",
+        "status",
+        "identity",
+        "last_heartbeat",
+        "last_inventory",
+        "last_location",
+    )
     inlines = [CommandInline]
+    actions = ("approve_selected", "revoke_selected", "decommission_selected", "allow_reenrollment")
+
+    @admin.action(description="Approve selected terminals")
+    def approve_selected(self, request, queryset):
+        for terminal in queryset.filter(status=Terminal.Status.PENDING):
+            terminal.status = Terminal.Status.ACTIVE
+            terminal.token = uuid.uuid4()
+            terminal.save(update_fields=["status", "token"])
+            enqueue(terminal, "ping")
+
+    @admin.action(description="Delete / revoke selected terminals")
+    def revoke_selected(self, request, queryset):
+        for terminal in queryset:
+            terminal.status = Terminal.Status.DELETED
+            terminal.token = uuid.uuid4()
+            terminal.save(update_fields=["status", "token"])
+
+    @admin.action(description="Decommission selected terminals")
+    def decommission_selected(self, request, queryset):
+        for terminal in queryset:
+            terminal.status = Terminal.Status.DECOMMISSIONED
+            terminal.token = uuid.uuid4()
+            terminal.save(update_fields=["status", "token"])
+
+    @admin.action(description="Allow selected terminals to request re-enrollment")
+    def allow_reenrollment(self, request, queryset):
+        for terminal in queryset.filter(status=Terminal.Status.DECOMMISSIONED):
+            terminal.status = Terminal.Status.PENDING
+            terminal.token = uuid.uuid4()
+            terminal.save(update_fields=["status", "token"])
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
     @admin.display(description="vendor")
     def vendor(self, obj):

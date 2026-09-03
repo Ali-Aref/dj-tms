@@ -1,7 +1,7 @@
 # Commands
 
 Commands are vendor-neutral. The server assigns `id`, `issuedAt`, and default `expiresAt`. The agent runs handlers locally and reports a terminal status.
-Agent poll/result routes require `Authorization: Bearer {token}` for known terminals.
+Agent poll/result routes require an active terminal and `Authorization: Bearer {token}`.
 Install/update handlers may also emit best-effort lifecycle events to `/v1/terminals/{id}/events`.
 
 ## Wire object (poll)
@@ -49,7 +49,7 @@ After a result is stored here, poll omits that command.
 | `update_agent` | `succeeded` / `agent updated` | `url`, `sha256`, `packageName` required |
 | anything else | `failed` / `unsupported:{type}` | any |
 
-Enqueue validation for install/uninstall/reboot/poweroff payloads lives in [Operator API](operator-api.md). The server also checks terminal `capabilities` from register and rejects unsupported command types with `400`.
+Enqueue validation for install/uninstall/reboot/poweroff payloads lives in [Operator API](operator-api.md). The server also rejects non-active terminals and checks terminal `capabilities` from register before enqueueing.
 
 ### `install_app` payload
 
@@ -95,7 +95,7 @@ Enqueue validation for install/uninstall/reboot/poweroff payloads lives in [Oper
 
 ## Idempotency
 
-- Register: same `serialNumber` → same terminal and token.
+- Register: same `serialNumber` → same retained terminal row; token issuance and rotation follow the [enrollment lifecycle](agent-api.md#post-terminalsregister).
 - Command `id`: agent-side; retries must not install or reboot twice for the same id.
 - Result POST: unknown id is still `204`; known id overwrites stored result.
 

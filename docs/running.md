@@ -24,7 +24,16 @@ Create a staff user once:
 python manage.py createsuperuser
 ```
 
-Open `http://<host>:3000/admin/`. Terminals show serial, vendor, model, last heartbeat, and last location (`lat, lng (provider)`). Open a terminal to see the full `last_location` JSON. Add commands from **Commands** or the terminal inline. Payload validation matches the operator API.
+Open `http://<host>:3000/admin/`. Terminals show serial, lifecycle status, vendor, model, last heartbeat, and last location (`lat, lng (provider)`). Open a terminal to see its details. Add commands from **Commands** or the terminal inline; only active terminals accept them.
+
+Terminal lifecycle actions are available from **Admin → Terminals**:
+
+1. A new POS appears as `pending`; select it and run **Approve selected terminals**. Approval rotates its token and queues the initial `ping`.
+2. **Delete / revoke selected terminals** revokes credentials but retains history. Its next registration request becomes pending and needs approval.
+3. **Decommission selected terminals** blocks the POS. It remains blocked without repeated network calls.
+4. To recover a decommissioned POS, run **Allow selected terminals to request re-enrollment**, then use **Request re-enrollment** on the POS. Approve the resulting pending terminal.
+
+Normal hard delete is disabled in admin so commands, events, and audit context are retained.
 
 For **install**, **uninstall**, **reboot**, and **agent update** walkthroughs see [Remote ops](remote-ops.md). `install_app` and `update_agent` require `url` and `sha256` in the payload.
 
@@ -38,7 +47,14 @@ http://10.31.11.228:3000/v1
 
 The POS and this machine must be on the same network. `localhost` on the device is the device itself, not this PC.
 
-On a successful first tick you should see register → heartbeat → poll (`ping`) → result → inventory. After the app is granted background location permission, its first location report is also due, then repeats about every 15 minutes. Confirm it on the terminal’s **last location** admin column, or with `GET /v1/terminals/{id}` → `lastLocation` (coordinates, provider, `capturedAt`, `receivedAt`). The POS status screen should show Registered yes, a terminal id, Last sync advancing, Last error empty. It does not display coordinates.
+On first contact you should see register `202`; approve the pending row. The next agent retry receives credentials, then sends heartbeat → polls `ping` → reports result → sends inventory. After background location permission is granted, location reports approximately every 15 minutes. Confirm them in the terminal's **last location** field. The POS should then show Registered yes, a terminal id, Last sync advancing, and no Last error.
+
+| POS message | Meaning | Action |
+|---|---|---|
+| `pending approval` | Enrollment exists but is not active. | Approve it in Django admin; the POS retries at 2m, 4m, 8m, then every 15m. |
+| `removed by admin` | Token/enrollment was revoked. | Approve the new pending request when the POS registers again. |
+| `terminal registration lost` | The terminal id was unknown for three consecutive ticks. | Check for database loss, then approve the replacement enrollment. |
+| `decommissioned` | Registration is deliberately blocked. | Allow re-enrollment in admin, then request it locally on the POS. |
 
 ## Logging
 
@@ -50,7 +66,7 @@ POST /v1/terminals/register 200 1ms
   res {"terminalId":"...","token":"..."}
 ```
 
-Restarting the server keeps terminals in SQLite. The agent keeps using the same `terminalId` and `token` after re-register with the same serial.
+Restarting the server keeps terminals in SQLite. Active terminals keep working; lifecycle actions rotate credentials as documented above.
 
 ## Content type
 
