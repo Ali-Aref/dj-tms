@@ -29,7 +29,7 @@ All terminals in the database.
 }
 ```
 
-`lastHeartbeat`, `lastInventory`, and `lastLocation` are `null` until the agent has posted them. `lastLocation` is only the newest accepted location, not a history. `commands` is the full stored list (pending and completed). Same data is visible in Django admin at `/admin/`.
+`lastHeartbeat`, `lastInventory`, and `lastLocation` are `null` until the agent has posted them. `lastLocation` is only the newest accepted location, not a history; inspect it here or in Django admin at `/admin/` (**Terminals** list **last location** column, or the terminal’s `last_location` field). `commands` is the full stored list (pending and completed). There is no map view in this sample.
 
 Agent-supplied heartbeat diagnostics, event messages/meta, and command result strings are displayed from already-redacted persisted values. Sensitive values appear as `[REDACTED]`.
 

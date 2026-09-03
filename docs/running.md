@@ -24,7 +24,7 @@ Create a staff user once:
 python manage.py createsuperuser
 ```
 
-Open `http://<host>:3000/admin/`. Terminals show serial, vendor, model, last heartbeat. Add commands from **Commands** or the terminal inline. Payload validation matches the operator API.
+Open `http://<host>:3000/admin/`. Terminals show serial, vendor, model, last heartbeat, and last location (`lat, lng (provider)`). Open a terminal to see the full `last_location` JSON. Add commands from **Commands** or the terminal inline. Payload validation matches the operator API.
 
 For **install**, **uninstall**, **reboot**, and **agent update** walkthroughs see [Remote ops](remote-ops.md). `install_app` and `update_agent` require `url` and `sha256` in the payload.
 
@@ -38,7 +38,7 @@ http://10.31.11.228:3000/v1
 
 The POS and this machine must be on the same network. `localhost` on the device is the device itself, not this PC.
 
-On a successful first tick you should see register → heartbeat → poll (`ping`) → result → inventory. After the app is granted background location permission, its first location report is also due, then repeats about every 15 minutes. The status screen should show Registered yes, a terminal id, Last sync advancing, Last error empty.
+On a successful first tick you should see register → heartbeat → poll (`ping`) → result → inventory. After the app is granted background location permission, its first location report is also due, then repeats about every 15 minutes. Confirm it on the terminal’s **last location** admin column, or with `GET /v1/terminals/{id}` → `lastLocation` (coordinates, provider, `capturedAt`, `receivedAt`). The POS status screen should show Registered yes, a terminal id, Last sync advancing, Last error empty. It does not display coordinates.
 
 ## Logging
 

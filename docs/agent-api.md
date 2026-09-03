@@ -97,7 +97,7 @@ Auth failure: `401`.
 
 ## `POST /terminals/{terminalId}/location`
 
-Latest terminal location. The agent sends this approximately every 15 minutes after the device has background location permission. This sample retains only the latest accepted report; it does not build a location history.
+Latest terminal location. The agent sends this approximately every 15 minutes after Android location permission is granted. This sample retains only the latest accepted report; it does not build a location history. Read it back from `GET /v1/terminals/{id}` (`lastLocation`) or Django admin (**Terminals** → last location).
 
 **Request**
 

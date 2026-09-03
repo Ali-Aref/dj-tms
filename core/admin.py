@@ -34,7 +34,7 @@ class CommandInline(admin.TabularInline):
 
 @admin.register(Terminal)
 class TerminalAdmin(admin.ModelAdmin):
-    list_display = ("serial_number", "terminal_id", "vendor", "model", "heartbeat_summary")
+    list_display = ("serial_number", "terminal_id", "vendor", "model", "heartbeat_summary", "location_summary")
     search_fields = ("serial_number", "terminal_id")
     readonly_fields = ("terminal_id", "token", "identity", "last_heartbeat", "last_inventory", "last_location")
     inlines = [CommandInline]
@@ -53,6 +53,13 @@ class TerminalAdmin(admin.ModelAdmin):
         if not hb:
             return "-"
         return f"{hb.get('network', '?')} batt={hb.get('batteryPercent', '?')}"
+
+    @admin.display(description="last location")
+    def location_summary(self, obj):
+        loc = obj.last_location
+        if not loc:
+            return "-"
+        return f"{loc.get('latitude')}, {loc.get('longitude')} ({loc.get('provider', '?')})"
 
 
 class CommandAdminForm(ModelForm):
