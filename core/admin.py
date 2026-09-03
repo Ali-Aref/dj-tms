@@ -36,7 +36,7 @@ class CommandInline(admin.TabularInline):
 class TerminalAdmin(admin.ModelAdmin):
     list_display = ("serial_number", "terminal_id", "vendor", "model", "heartbeat_summary")
     search_fields = ("serial_number", "terminal_id")
-    readonly_fields = ("terminal_id", "token", "identity", "last_heartbeat", "last_inventory")
+    readonly_fields = ("terminal_id", "token", "identity", "last_heartbeat", "last_inventory", "last_location")
     inlines = [CommandInline]
 
     @admin.display(description="vendor")

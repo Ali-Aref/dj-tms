@@ -11,6 +11,7 @@ urlpatterns = [
     path("v1/terminals/<uuid:terminal_id>", views.terminal_detail),
     path("v1/terminals/<uuid:terminal_id>/heartbeat", views.heartbeat),
     path("v1/terminals/<uuid:terminal_id>/inventory", views.inventory),
+    path("v1/terminals/<uuid:terminal_id>/location", views.location),
     path("v1/terminals/<uuid:terminal_id>/events", views.terminal_event),
     path("v1/terminals/<uuid:terminal_id>/commands", views.commands),
     path(

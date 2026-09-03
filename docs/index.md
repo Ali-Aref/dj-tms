@@ -27,6 +27,7 @@ POS agent                         Operator (curl / admin)
 POST /terminals/register          GET  /health
 POST /terminals/:id/heartbeat     GET  /v1/terminals
 POST /terminals/:id/inventory     GET  /v1/terminals/:id
+POST /terminals/:id/location
 GET  /terminals/:id/commands      POST /v1/terminals/:id/commands
 POST /terminals/:id/commands/:cid/result
                                   Django admin: /admin/

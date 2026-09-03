@@ -10,6 +10,7 @@ class Terminal(models.Model):
     identity = models.JSONField(default=dict)
     last_heartbeat = models.JSONField(null=True, blank=True)
     last_inventory = models.JSONField(null=True, blank=True)
+    last_location = models.JSONField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

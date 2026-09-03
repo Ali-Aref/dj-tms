@@ -22,13 +22,14 @@ All terminals in the database.
       "identity": { "serialNumber": "…", "vendor": "topwise", "…": "…" },
       "lastHeartbeat": { "batteryPercent": 100, "network": "wifi", "receivedAt": 0 },
       "lastInventory": { "osVersion": "13", "apps": [], "receivedAt": 0 },
+      "lastLocation": { "latitude": 34.5, "longitude": 69.2, "provider": "network", "receivedAt": 0 },
       "commands": []
     }
   ]
 }
 ```
 
-`lastHeartbeat` / `lastInventory` are `null` until the agent has posted them. `commands` is the full stored list (pending and completed). Same data is visible in Django admin at `/admin/`.
+`lastHeartbeat`, `lastInventory`, and `lastLocation` are `null` until the agent has posted them. `lastLocation` is only the newest accepted location, not a history. `commands` is the full stored list (pending and completed). Same data is visible in Django admin at `/admin/`.
 
 Agent-supplied heartbeat diagnostics, event messages/meta, and command result strings are displayed from already-redacted persisted values. Sensitive values appear as `[REDACTED]`.
 

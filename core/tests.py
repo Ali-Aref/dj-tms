@@ -69,6 +69,25 @@ class ApiTests(TestCase):
         )
         self.assertEqual(code, 204)
 
+        code, _ = self._json(
+            "POST",
+            f"/v1/terminals/{tid}/location",
+            {
+                "protocolVersion": 1,
+                "latitude": 34.5,
+                "longitude": 69.2,
+                "accuracyMeters": 12.5,
+                "provider": "network",
+                "capturedAt": 1789000000000,
+            },
+            auth=f"Bearer {token}",
+        )
+        self.assertEqual(code, 204)
+        code, terminal = self._json("GET", f"/v1/terminals/{tid}")
+        self.assertEqual(code, 200)
+        self.assertEqual(terminal["lastLocation"]["latitude"], 34.5)
+        self.assertIn("receivedAt", terminal["lastLocation"])
+
         code, body = self._json("GET", f"/v1/terminals/{tid}/commands", auth=f"Bearer {token}")
         self.assertEqual(code, 200)
         self.assertEqual(len(body["commands"]), 1)
@@ -267,6 +286,14 @@ class ApiTests(TestCase):
 
         code, body = self._json(
             "POST",
+            f"/v1/terminals/{tid}/location",
+            {"latitude": 34.5, "longitude": 69.2, "provider": "network", "capturedAt": 1},
+        )
+        self.assertEqual(code, 401)
+        self.assertEqual(body["error"], "unauthorized")
+
+        code, body = self._json(
+            "POST",
             f"/v1/terminals/{tid}/commands/unknown/result",
             {"protocolVersion": 1, "status": "succeeded", "message": "ok", "completedAt": 1},
             auth=f"Bearer {token}",
@@ -284,6 +311,18 @@ class ApiTests(TestCase):
         )
         self.assertEqual(code, 401)
         self.assertEqual(body["error"], "unauthorized")
+
+    def test_location_validates_coordinates(self):
+        _, registered = self._json("POST", "/v1/terminals/register", self.identity)
+        tid, token = registered["terminalId"], registered["token"]
+        code, body = self._json(
+            "POST",
+            f"/v1/terminals/{tid}/location",
+            {"latitude": 100, "longitude": 69.2, "provider": "network", "capturedAt": 1},
+            auth=f"Bearer {token}",
+        )
+        self.assertEqual(code, 400)
+        self.assertEqual(body["error"], "latitude must be between -90 and 90")
 
     def test_events_endpoint_persists_and_shows_in_terminal_detail(self):
         code, body = self._json("POST", "/v1/terminals/register", self.identity)

@@ -38,7 +38,7 @@ http://10.31.11.228:3000/v1
 
 The POS and this machine must be on the same network. `localhost` on the device is the device itself, not this PC.
 
-On a successful first tick you should see register → heartbeat → poll (`ping`) → result → inventory, then heartbeat + empty polls. The status screen should show Registered yes, a terminal id, Last sync advancing, Last error empty.
+On a successful first tick you should see register → heartbeat → poll (`ping`) → result → inventory. After the app is granted background location permission, its first location report is also due, then repeats about every 15 minutes. The status screen should show Registered yes, a terminal id, Last sync advancing, Last error empty.
 
 ## Logging
 

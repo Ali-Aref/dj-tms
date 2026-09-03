@@ -116,6 +116,7 @@ def terminal_view(terminal, include_events=False, event_limit=20):
         "identity": terminal.identity,
         "lastHeartbeat": terminal.last_heartbeat,
         "lastInventory": terminal.last_inventory,
+        "lastLocation": terminal.last_location,
         "commands": [command_view(c) for c in terminal.commands.all()],
     }
     if include_events:

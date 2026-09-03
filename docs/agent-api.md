@@ -95,6 +95,28 @@ Installed-app snapshot. Stored with `receivedAt`. Can be large (full package lis
 **Response:** `204` empty.
 Auth failure: `401`.
 
+## `POST /terminals/{terminalId}/location`
+
+Latest terminal location. The agent sends this approximately every 15 minutes after the device has background location permission. This sample retains only the latest accepted report; it does not build a location history.
+
+**Request**
+
+```json
+{
+  "protocolVersion": 1,
+  "latitude": 34.5,
+  "longitude": 69.2,
+  "accuracyMeters": 12.5,
+  "provider": "network",
+  "capturedAt": 1789000000000
+}
+```
+
+`latitude` must be -90 through 90; `longitude` must be -180 through 180. `accuracyMeters` is optional and must be non-negative. `provider` is a non-empty string. `capturedAt` is device epoch milliseconds; the server adds `receivedAt`.
+
+**Response:** `204` empty.
+Auth failure: `401`.
+
 ## `GET /terminals/{terminalId}/commands`
 
 Pending work for this terminal. Returns only commands that have **no result yet**.

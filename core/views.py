@@ -1,4 +1,5 @@
 import json
+import math
 import time
 
 from django.http import HttpResponse, JsonResponse
@@ -120,6 +121,50 @@ def inventory(request, terminal_id):
     terminal.last_inventory = {**body, "receivedAt": int(time.time() * 1000)}
     terminal.save(update_fields=["last_inventory"])
     return HttpResponse(status=204)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def location(request, terminal_id):
+    terminal, error = _terminal_and_auth_or_error(request, terminal_id)
+    if error:
+        return error
+    try:
+        body = _json_body(request)
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "invalid json"}, status=400)
+
+    latitude = body.get("latitude")
+    longitude = body.get("longitude")
+    accuracy = body.get("accuracyMeters")
+    provider = body.get("provider")
+    captured_at = body.get("capturedAt")
+    if not _number(latitude) or not -90 <= latitude <= 90:
+        return JsonResponse({"error": "latitude must be between -90 and 90"}, status=400)
+    if not _number(longitude) or not -180 <= longitude <= 180:
+        return JsonResponse({"error": "longitude must be between -180 and 180"}, status=400)
+    if accuracy is not None and (not _number(accuracy) or accuracy < 0):
+        return JsonResponse({"error": "accuracyMeters must be non-negative"}, status=400)
+    if not isinstance(provider, str) or not provider.strip():
+        return JsonResponse({"error": "provider required"}, status=400)
+    if not _number(captured_at):
+        return JsonResponse({"error": "capturedAt required"}, status=400)
+
+    terminal.last_location = {
+        "protocolVersion": body.get("protocolVersion"),
+        "latitude": latitude,
+        "longitude": longitude,
+        "accuracyMeters": accuracy,
+        "provider": provider.strip(),
+        "capturedAt": int(captured_at),
+        "receivedAt": int(time.time() * 1000),
+    }
+    terminal.save(update_fields=["last_location"])
+    return HttpResponse(status=204)
+
+
+def _number(value):
+    return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value)
 
 
 @csrf_exempt
