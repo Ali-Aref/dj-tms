@@ -71,7 +71,7 @@ Missing `type` → `400` `{ "error": "type required" }`.
 
 **Response `201`** — the stored command, including `status: "pending"` and `result: null`.
 
-Install / uninstall / reboot / update-agent examples: [Remote ops](remote-ops.md).
+Install / uninstall / reboot / poweroff / update-agent examples: [Remote ops](remote-ops.md).
 
 ```bash
 curl -s -X POST http://127.0.0.1:3000/v1/terminals/<terminalId>/commands \
@@ -79,4 +79,4 @@ curl -s -X POST http://127.0.0.1:3000/v1/terminals/<terminalId>/commands \
   -d '{"type":"ping"}'
 ```
 
-Useful types today: `ping`, `collect_inventory`, `install_app`, `uninstall_app`, `reboot`, `update_agent`. Payload rules: [Commands](commands.md). Invalid payload or missing terminal capability → `400` with an error string (e.g. `install_app: sha256 required`, `terminal does not support install_app`).
+Useful types today: `ping`, `collect_inventory`, `install_app`, `uninstall_app`, `reboot`, `poweroff`, `update_agent`. Payload rules: [Commands](commands.md). Invalid payload or missing terminal capability → `400` with an error string (e.g. `install_app: sha256 required`, `terminal does not support install_app`).

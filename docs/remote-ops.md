@@ -1,4 +1,4 @@
-# Install, uninstall, reboot, and agent update
+# Install, uninstall, reboot, poweroff, and agent update
 
 How to push sensitive commands from TMSExpress to a POS. The agent polls about every **60 seconds**, so expect up to one minute before work starts.
 
@@ -157,6 +157,29 @@ Result: **`succeeded` / `reboot scheduled`**, then the device restarts.
 
 ---
 
+## Poweroff (`poweroff`)
+
+### Admin
+
+| Field | Value |
+|---|---|
+| Type | `poweroff` |
+| Payload | `{}` or `{"delayMs": 5000}` |
+
+`delayMs` is optional (default `0`). The agent posts the result first, then powers off after the delay.
+
+### curl
+
+```bash
+curl -s -X POST "http://HOST:3000/v1/terminals/$ID/commands" \
+  -H 'content-type: application/json' \
+  -d '{"type":"poweroff","payload":{"delayMs":0}}'
+```
+
+Result: **`succeeded` / `poweroff scheduled`**, then the device shuts down.
+
+---
+
 ## Update agent (`update_agent`)
 
 Use this command to update the TMS agent app itself on the POS.
@@ -200,6 +223,7 @@ Guard failures:
 | `install_app` | `url`, `sha256` | `installed` |
 | `uninstall_app` | `packageName` | `uninstalled` or `already absent` |
 | `reboot` | none (`delayMs` optional) | `reboot scheduled` |
+| `poweroff` | none (`delayMs` optional) | `poweroff scheduled` |
 | `update_agent` | `url`, `sha256`, `packageName` | `agent updated` |
 
 ## Troubleshooting

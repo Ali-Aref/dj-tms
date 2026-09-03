@@ -24,7 +24,7 @@ Creates or reuses a terminal. No bearer. `serialNumber` is the idempotency key.
   "firmware": "Z6532AA_PARSA_T6_TSEC_V2.0.2_user",
   "osVersion": "13",
   "agentVersion": "1.0",
-  "capabilities": ["ping", "collect_inventory", "install_app", "uninstall_app", "reboot", "update_agent"]
+  "capabilities": ["ping", "collect_inventory", "install_app", "uninstall_app", "reboot", "poweroff", "update_agent"]
 }
 ```
 

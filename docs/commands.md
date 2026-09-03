@@ -45,10 +45,11 @@ After a result is stored here, poll omits that command.
 | `install_app` | `succeeded` / `installed` | `url` and `sha256` required; optional `packageName` |
 | `uninstall_app` | `succeeded` / `uninstalled` or `already absent` | `packageName` required |
 | `reboot` | `succeeded` / `reboot scheduled` | optional `delayMs` (default `0`) |
+| `poweroff` | `succeeded` / `poweroff scheduled` | optional `delayMs` (default `0`) |
 | `update_agent` | `succeeded` / `agent updated` | `url`, `sha256`, `packageName` required |
 | anything else | `failed` / `unsupported:{type}` | any |
 
-Enqueue validation for install/uninstall/reboot payloads lives in [Operator API](operator-api.md). The server also checks terminal `capabilities` from register and rejects unsupported command types with `400`.
+Enqueue validation for install/uninstall/reboot/poweroff payloads lives in [Operator API](operator-api.md). The server also checks terminal `capabilities` from register and rejects unsupported command types with `400`.
 
 ### `install_app` payload
 
@@ -69,6 +70,12 @@ Enqueue validation for install/uninstall/reboot payloads lives in [Operator API]
 ```
 
 ### `reboot` payload
+
+```json
+{ "delayMs": 0 }
+```
+
+### `poweroff` payload
 
 ```json
 { "delayMs": 0 }

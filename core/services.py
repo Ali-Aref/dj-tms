@@ -15,6 +15,7 @@ COMMAND_CAPABILITIES = {
     "install_app": "install_app",
     "uninstall_app": "uninstall_app",
     "reboot": "reboot",
+    "poweroff": "poweroff",
     "update_agent": "update_agent",
 }
 
@@ -64,6 +65,11 @@ def validate_enqueue_payload(cmd_type, payload):
         delay = payload.get("delayMs")
         if delay is not None and (not isinstance(delay, (int, float)) or delay < 0):
             return "reboot: delayMs must be a number >= 0"
+        return None
+    if cmd_type == "poweroff":
+        delay = payload.get("delayMs")
+        if delay is not None and (not isinstance(delay, (int, float)) or delay < 0):
+            return "poweroff: delayMs must be a number >= 0"
         return None
     if cmd_type == "update_agent":
         url = payload.get("url")

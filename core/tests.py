@@ -137,6 +137,14 @@ class ApiTests(TestCase):
         code, body = self._json(
             "POST",
             f"/v1/terminals/{tid}/commands",
+            {"type": "poweroff", "payload": {"delayMs": 0}},
+        )
+        self.assertEqual(code, 400)
+        self.assertIn("does not support", body["error"])
+
+        code, body = self._json(
+            "POST",
+            f"/v1/terminals/{tid}/commands",
             {
                 "type": "update_agent",
                 "payload": {
@@ -157,6 +165,7 @@ class ApiTests(TestCase):
                 "install_app",
                 "uninstall_app",
                 "reboot",
+                "poweroff",
                 "update_agent",
             ],
         }
@@ -217,6 +226,14 @@ class ApiTests(TestCase):
         )
         self.assertEqual(code, 201)
         self.assertEqual(body["type"], "reboot")
+
+        code, body = self._json(
+            "POST",
+            f"/v1/terminals/{tid}/commands",
+            {"type": "poweroff", "payload": {"delayMs": 0}},
+        )
+        self.assertEqual(code, 201)
+        self.assertEqual(body["type"], "poweroff")
 
         code, body = self._json(
             "POST",
